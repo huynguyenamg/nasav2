@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Roboto', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f0f9ff;
+  color: #0c4a6e;
+}
+
+h1, h2, h3, h4, button, input, select, textarea, .font-display {
+  font-family: var(--font-sans);
+}
+
+@keyframes gentle-wobble {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-3px) rotate(-0.6deg);
+  }
+  75% {
+    transform: translateX(3px) rotate(0.6deg);
+  }
+}
+
+.animate-gentle-wobble {
+  animation: gentle-wobble 0.45s ease-in-out infinite;
+}
+
+/* Soft sky-blue scrollbar for sunny light UI */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #e0f2fe;
+}
+::-webkit-scrollbar-thumb {
+  background: #7dd3fc;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #38bdf8;
+}

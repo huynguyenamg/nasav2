@@ -1,0 +1,8 @@
+{
+  "name": "Space Mission Academy – Little NASA Engineers",
+  "description": "Interactive NASA data-powered space mission design and simulation game for young explorers and engineers (NASA Space Apps Challenge 2026).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
