@@ -121,39 +121,39 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
     ],
     preschool: {
       simpleName: {
-        vi: 'Robot Sao Hỏa Perseverance',
-        en: 'Perseverance Mars Robot',
+        vi: 'Robot tự hành Perseverance',
+        en: 'Perseverance Mars Rover',
       },
-      badgeEmoji: '🤖',
+      badgeEmoji: '',
       whatIsItSpeech: {
-        vi: 'Xin chào bé! Đây là robot Perseverance. Bạn ấy là một chú robot thông minh đang thám hiểm hành tinh Đỏ sao Hỏa đấy!',
-        en: 'Hello explorer! This is Perseverance, a smart robot exploring the Red Planet Mars!',
+        vi: 'Đây là robot tự hành Perseverance đang làm nhiệm vụ khảo sát địa chất tại miệng hố Jezero trên Sao Hỏa.',
+        en: 'This is the Perseverance rover conducting geological surveys inside Jezero Crater on Mars.',
       },
       usedForShort: {
-        vi: 'Robot khám phá sao Hỏa, chụp ảnh và tìm hiểu đá trên sao Hỏa.',
-        en: 'A Mars explorer robot that takes pictures and studies rocks on Mars.',
+        vi: 'Khảo sát địa hình Sao Hỏa, chụp ảnh 3D, phân tích thành phần đá và lưu trữ ống mẫu gửi về Trái Đất.',
+        en: 'Surveys Martian terrain, captures 3D imagery, analyzes rocks, and caches samples for Earth return.',
       },
       usedForSpeech: {
-        vi: 'Perseverance là robot khám phá sao Hỏa, chụp ảnh và tìm hiểu các viên đá trên sao Hỏa.',
-        en: 'Perseverance explores Mars, takes pictures, and studies rocks on the Martian surface.',
+        vi: 'Perseverance di chuyển qua miệng hố Jezero để khảo sát đất đá cổ, tìm dấu vết môi trường nước và niêm phong mẫu vật.',
+        en: 'Perseverance drives across Jezero Crater to examine ancient rocks, probe water history, and seal core samples.',
       },
       parts: [
         {
           id: 'p_eyes',
-          simpleName: { vi: 'Đôi mắt camera (Mastcam-Z)', en: 'Camera Eyes (Mastcam-Z)' },
+          simpleName: { vi: 'Cụm camera Mastcam-Z', en: 'Mastcam-Z Stereo Cameras' },
           shortRole: {
-            vi: 'Nhìn đường và chụp ảnh màu rõ nét trên sao Hỏa.',
-            en: 'Sees the path and takes crisp color photos on Mars.',
+            vi: 'Chụp ảnh màu 3D độ phân giải cao và định hướng tránh đá cản đường.',
+            en: 'Captures 3D stereo color imagery and scouts terrain obstacles.',
           },
           voiceLine: {
-            vi: 'Đây là đôi mắt camera! Giúp robot nhìn rõ đường đi và chụp ảnh sao Hỏa thật đẹp.',
-            en: 'These are the camera eyes! They help the robot see the path and take clear Mars photos.',
+            vi: 'Cụm camera Mastcam-Z gắn trên đỉnh cột buồm giúp bạn quan sát địa hình 3D và chọn mục tiêu đá chính xác.',
+            en: 'Mounted atop the mast, Mastcam-Z captures 3D panoramas to help you identify rock targets.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/PIA23266/PIA23266~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Gắn trên đỉnh cột cổ cao phía trước đầu robot',
+            vi: 'Gắn trên đỉnh cột nâng phía trước thân xe',
             en: 'Mounted high on the front mast head',
           },
           hotspotCoords: { x: 63, y: 21 },
@@ -162,21 +162,21 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'p_wheels',
-          simpleName: { vi: '6 bánh xe leo đá', en: '6 Climbing Wheels' },
+          simpleName: { vi: 'Hệ 6 bánh xe hợp kim nhôm', en: '6 Aluminum Rocker-Bogie Wheels' },
           shortRole: {
-            vi: 'Lăn trên cát đỏ và trèo qua đá gồ ghề an toàn.',
-            en: 'Rolls over red sand and climbs bumpy rocks safely.',
+            vi: 'Vượt dốc cát và sỏi đá gồ ghề mà không bị lật nhờ cơ cấu treo Rocker-Bogie.',
+            en: 'Traverses Martian sand and boulders safely via the Rocker-Bogie suspension.',
           },
           voiceLine: {
-            vi: 'Robot có tới 6 bánh xe thật khỏe! Giúp bạn ấy đi trên cát và trèo qua đá.',
-            en: 'The robot has 6 strong wheels to roll across sand and climb over rocks!',
+            vi: 'Sáu bánh xe hợp kim nhôm có các vấu bám uốn cong giúp xe vượt qua đá sắc nhọn mà vẫn ổn định trọng tâm.',
+            en: 'Six cleated aluminum wheels climb rocky slopes while keeping the chassis level.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/KSC-20200402-PH-JPL01_0002/KSC-20200402-PH-JPL01_0002~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: '6 bánh xe bằng nhôm xếp hai bên phía dưới thân xe',
-            en: 'Six aluminum wheels lined along the bottom sides',
+            vi: '6 bánh xe xếp đối xứng hai bên dưới khung gầm Rocker-Bogie',
+            en: 'Six aluminum wheels lined along both sides of the suspension',
           },
           hotspotCoords: { x: 48, y: 74 },
           icon: 'Compass',
@@ -184,14 +184,14 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'p_arm',
-          simpleName: { vi: 'Cánh tay gắp & khoan đá', en: 'Rock-Drilling Arm' },
+          simpleName: { vi: 'Cánh tay robot & mũi khoan mẫu', en: 'Robotic Arm & Sample Drill' },
           shortRole: {
-            vi: 'Vươn ra chạm, quét và lấy các mẫu đá nhỏ.',
-            en: 'Reaches out to touch and drill small rock samples.',
+            vi: 'Vươn ra quét phổ đá, khoan lõi và niêm phong mẫu vào ống titan kín.',
+            en: 'Extends to scan, core-drill, and seal rock samples in titanium tubes.',
           },
           voiceLine: {
-            vi: 'Đây là cánh tay robot! Bạn ấy vươn tay ra nhặt các viên đá nhỏ để khám phá.',
-            en: 'This is the robot arm! It reaches out to touch and collect tiny rocks.',
+            vi: 'Cánh tay robot dài 2,1 mét gắn ở mũi xe đảm nhiệm việc khoan lõi đá và thu thập mẫu địa chất.',
+            en: 'The 2.1-meter front arm reaches rock surfaces to drill cores and analyze minerals.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/PIA24338/PIA24338~small.jpg',
           isRealPhoto: true,
@@ -206,20 +206,20 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'p_antenna',
-          simpleName: { vi: 'Ăng-ten gửi tin về Trái Đất', en: 'Earth Dish Antenna' },
+          simpleName: { vi: 'Hệ ăng-ten liên lạc HGA & UHF', en: 'HGA & UHF Antennas' },
           shortRole: {
-            vi: 'Gửi ảnh và dữ liệu từ sao Hỏa bay về Trái Đất.',
-            en: 'Sends photos and science data from Mars back to Earth.',
+            vi: 'Truyền dữ liệu khoa học về Trái Đất trực tiếp hoặc qua vệ tinh quỹ đạo Sao Hỏa.',
+            en: 'Transmits science data directly to Earth or via Mars orbiters.',
           },
           voiceLine: {
-            vi: 'Còn đây là chiếc ăng-ten trên lưng robot! Giúp gửi ảnh từ sao Hỏa về Trái Đất cho chúng mình xem.',
-            en: 'Here is the antenna on the rover deck! It sends photos from Mars all the way back to Earth.',
+            vi: 'Hệ ăng-ten trên boong sau giúp robot nhận lệnh từ trung tâm điều khiển và gửi hình ảnh về Trái Đất.',
+            en: 'Deck antennas receive commands and beam Martian imagery back to Earth.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/PIA24045/PIA24045~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Đặt trên lưng thân xe phía sau cột camera',
+            vi: 'Đặt trên boong sau phía sau cột camera',
             en: 'Mounted on the top deck behind the camera mast',
           },
           hotspotCoords: { x: 52, y: 39 },
@@ -228,20 +228,20 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'p_power',
-          simpleName: { vi: 'Trái tim năng lượng MMRTG', en: 'Day & Night Power Pack' },
+          simpleName: { vi: 'Máy phát nhiệt điện MMRTG', en: 'MMRTG Power Source' },
           shortRole: {
-            vi: 'Tạo ra điện ấm áp giúp robot chạy cả ngày lẫn đêm.',
-            en: 'Produces steady warmth and electricity day and night.',
+            vi: 'Phát điện và giữ ấm ổn định cả ngày lẫn đêm, không bị ảnh hưởng bởi bão bụi.',
+            en: 'Provides continuous electricity and warmth day and night, immune to dust storms.',
           },
           voiceLine: {
-            vi: 'Đây là bộ nguồn năng lượng đặc biệt gắn sau đuôi xe giúp robot luôn khỏe mạnh ngay cả khi có bão bụi!',
-            en: 'This special power unit at the back keeps the rover running even during dust storms!',
+            vi: 'Bộ nguồn MMRTG gắn ở đuôi xe cung cấp năng lượng bền bỉ giúp các thiết bị khoa học hoạt động liên tục.',
+            en: 'The rear MMRTG generator keeps power and thermal stability running round the clock.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/PIA24233/PIA24233~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Gắn nghiêng ở đuôi sau của thân robot',
+            vi: 'Gắn nghiêng ở phần đuôi phía sau thân xe',
             en: 'Mounted at the rear tail of the rover body',
           },
           hotspotCoords: { x: 80, y: 50 },
@@ -250,12 +250,12 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
       ],
       funFact: {
-        vi: 'Robot Perseverance còn mang theo một bạn trực thăng tí hon biết bay trên sao Hỏa đấy!',
-        en: 'Perseverance carried a tiny helicopter friend that flies in the sky of Mars!',
+        vi: 'Perseverance đã mang theo trực thăng Ingenuity thực hiện chuyến bay có điều khiển đầu tiên trên một hành tinh khác.',
+        en: 'Perseverance carried the Ingenuity helicopter, achieving the first powered flight on another planet.',
       },
       funFactSpeech: {
-        vi: 'Em có biết không? Robot Perseverance còn mang theo một người bạn trực thăng tí hon biết bay trên sao Hỏa đấy!',
-        en: 'Did you know? Perseverance brought along a tiny helicopter friend that actually flies on Mars!',
+        vi: 'Điểm thú vị là bạn có thể thấy Perseverance từng mang theo trực thăng Ingenuity để thử nghiệm bay trong bầu khí quyển mỏng của Sao Hỏa.',
+        en: 'Notably, Perseverance brought along the Ingenuity helicopter to test flight in Mars’ thin air.',
       },
     },
     introKid: {
@@ -384,9 +384,9 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
       ],
       funFacts: {
         vi: [
-          'Perseverance mang theo micro thu được âm thanh thật đầu tiên của gió Sao Hỏa và tiếng tia laser nổ tách tách trên đá!',
-          'Dưới bụng xe từng chở chiếc trực thăng tí hon Ingenuity — cỗ máy đầu tiên bay được trên hành tinh khác.',
-          'Vì Sao Hỏa quá xa, tín hiệu radio từ Trái Đất mất từ 4 đến 24 phút mới bay tới nơi nên robot phải tự tránh đá bằng trí tuệ máy tính!',
+          'Perseverance mang theo micro thu được âm thanh thật đầu tiên của gió Sao Hỏa và tiếng tia laser nổ tách tách trên đá.',
+          'Dưới bụng xe từng gắn trực thăng Ingenuity — phương tiện bay có điều khiển đầu tiên trên hành tinh khác.',
+          'Vì Sao Hỏa quá xa, tín hiệu radio từ Trái Đất mất từ 4 đến 24 phút mới tới nơi nên robot phải tự định hướng tránh đá.',
         ],
         en: [
           'Perseverance carries microphones that recorded the first real sounds of Martian wind and laser zaps!',
@@ -481,7 +481,7 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
             en: 'Head-mounted laser and light analyzer (spectrometer) studying rocks from meters away.',
           },
           functionDesc: {
-            vi: 'SuperCam bắn chùm laser vào tảng đá cách tới 7 m làm bay hơi một chấm tí hon, rồi đọc ánh sáng phát ra để biết đá chứa nguyên tố hóa học gì (kèm micro nghe tiếng nổ!).',
+            vi: 'SuperCam bắn chùm laser vào tảng đá cách tới 7 m làm bay hơi một chấm nhỏ, rồi đọc ánh sáng phát ra để xác định thành phần khoáng vật.',
             en: 'Fires an invisible laser beam up to 7 m away, analyzes the glowing plasma spark to read rock minerals, and listens with its microphone.',
           },
           analogy: {
@@ -720,18 +720,18 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         viewCategory: 'closeup',
       },
       {
-        url: 'https://assets.science.nasa.gov/content/dam/science/missions/landsat/2019/04/GSFC_20181009_TIRS2_33878_EnvironmentalTesting.png/jcr:content/renditions/cq5dam.web.1280.1280.png',
+        url: 'https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/OLI2-TIRS-2.PNG',
         fallbackUrl: '/src/assets/images/satellite_earth_orbit_1794503041148.jpg',
         title: {
-          vi: 'Cận cảnh cảm biến đo nhiệt TIRS-2 thật',
-          en: 'Close-Up of Thermal Sensor TIRS-2',
+          vi: 'Sơ đồ cảm biến đo nhiệt TIRS-2 & quang học OLI-2',
+          en: 'Thermal Sensor TIRS-2 & OLI-2 Overview',
         },
         caption: {
-          vi: 'Ảnh thật cảm biến TIRS-2 tại NASA Goddard chuyên đo độ ấm nóng của mặt đất và đại dương.',
-          en: 'Real NASA Goddard photo of the TIRS-2 thermal infrared sensor.',
+          vi: 'Sơ đồ kỹ thuật chính thức của USGS mô tả cụm TIRS-2 đo nhiệt lượng hồng ngoại bề mặt Trái Đất.',
+          en: 'Official USGS graphic showing TIRS-2 thermal infrared sensor alongside OLI-2.',
         },
-        sourceLabel: 'NASA Goddard (TIRS-2)',
-        mediaKind: 'real_photo',
+        sourceLabel: 'USGS Landsat Missions',
+        mediaKind: 'technical_diagram',
         viewCategory: 'closeup',
       },
       {
@@ -782,33 +782,33 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
     ],
     preschool: {
       simpleName: {
-        vi: 'Vệ Tinh Landsat 9',
+        vi: 'Vệ tinh quan sát Trái Đất Landsat 9',
         en: 'Landsat 9 Satellite',
       },
-      badgeEmoji: '🛰️',
+      badgeEmoji: '',
       whatIsItSpeech: {
-        vi: 'Bé nhìn kìa! Đây là vệ tinh Landsat 9. Bạn ấy bay cao trên bầu trời để ngắm nhìn Trái Đất của chúng mình!',
-        en: 'Look up high! This is Landsat 9, a satellite flying above Earth to watch over our planet!',
+        vi: 'Đây là vệ tinh Landsat 9 hoạt động trên quỹ đạo đồng bộ Mặt Trời ở độ cao 705 km để quan sát Trái Đất.',
+        en: 'This is Landsat 9, operating in a 705 km sun-synchronous orbit to monitor Earth.',
       },
       usedForShort: {
-        vi: 'Vệ tinh chụp ảnh Trái Đất, giúp con người quan sát rừng, biển và đất đai.',
-        en: 'A satellite that photographs Earth to help us watch forests, oceans, and land.',
+        vi: 'Thu thập ảnh đa phổ và dữ liệu nhiệt hồng ngoại về rừng, đại dương, nguồn nước và biến đổi khí hậu.',
+        en: 'Captures multispectral imagery and thermal infrared telemetry of forests, oceans, water, and climate.',
       },
       usedForSpeech: {
-        vi: 'Landsat 9 là vệ tinh chụp ảnh Trái Đất, giúp con người quan sát rừng xanh, biển cả và đất đai.',
-        en: 'Landsat 9 photographs Earth from space so people can care for forests, oceans, and land.',
+        vi: 'Landsat 9 chụp ảnh bề mặt Trái Đất và đo nhiệt độ hồng ngoại giúp theo dõi rừng, hạn hán và biến đổi khí hậu.',
+        en: 'Landsat 9 images Earth’s surface and measures thermal emissions to monitor forests and climate change.',
       },
       parts: [
         {
           id: 'l9_cam_kid',
-          simpleName: { vi: 'Máy ảnh chụp Trái Đất (OLI-2)', en: 'Earth Camera (OLI-2)' },
+          simpleName: { vi: 'Cảm biến quang học OLI-2', en: 'OLI-2 Optical Imager' },
           shortRole: {
-            vi: 'Chụp ảnh màu sắc rừng cây, sông hồ và đại dương.',
-            en: 'Takes crisp photos of forests, rivers, and oceans.',
+            vi: 'Chụp ảnh đa phổ 9 dải bước sóng để theo dõi thảm thực vật, sông hồ và bờ biển.',
+            en: 'Captures 9-band imagery to track forests, rivers, and coastal waters.',
           },
           voiceLine: {
-            vi: 'Đây là máy ảnh siêu nét! Giúp vệ tinh chụp lại màu xanh của rừng cây và biển cả.',
-            en: 'This is the Earth camera! It takes colorful pictures of green forests and blue oceans.',
+            vi: 'Cảm biến OLI-2 cho phép bạn phân biệt trạng thái xanh tươi của rừng và sự thay đổi màu nước từ quỹ đạo.',
+            en: 'The OLI-2 sensor lets you analyze forest vitality and coastal water from orbit.',
           },
           imageUrl:
             'https://assets.science.nasa.gov/content/dam/science/missions/landsat/2019/09/oli2atballpic-1.jpg/jcr:content/renditions/cq5dam.web.1280.1280.jpeg',
@@ -824,22 +824,22 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'l9_heat_kid',
-          simpleName: { vi: 'Mắt đo nóng lạnh (TIRS-2)', en: 'Warm & Cool Eye (TIRS-2)' },
+          simpleName: { vi: 'Cảm biến nhiệt hồng ngoại TIRS-2', en: 'TIRS-2 Thermal Sensor' },
           shortRole: {
-            vi: 'Xem chỗ nào trên Trái Đất đang ấm hay mát.',
-            en: 'Checks which places on Earth are warm or cool.',
+            vi: 'Đo nhiệt độ bề mặt đất và đại dương để phát hiện sớm hạn hán hoặc cháy rừng.',
+            en: 'Measures surface thermal radiation to detect drought stress and wildfires.',
           },
           voiceLine: {
-            vi: 'Đây là mắt đo nóng lạnh! Giúp biết khu rừng hay dòng sông nào đang bị nóng quá.',
-            en: 'This is the warm and cool eye! It checks where land or water is getting too hot.',
+            vi: 'Cảm biến TIRS-2 đo bức xạ nhiệt phát ra từ mặt đất để phát hiện vùng khô hạn hoặc điểm nóng.',
+            en: 'TIRS-2 reads thermal infrared radiation to spot drought zones and thermal anomalies.',
           },
           imageUrl:
-            'https://assets.science.nasa.gov/content/dam/science/missions/landsat/2019/04/GSFC_20181009_TIRS2_33878_EnvironmentalTesting.png/jcr:content/renditions/cq5dam.web.1280.1280.png',
-          isRealPhoto: true,
-          mediaKind: 'real_photo',
+            'https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/OLI2-TIRS-2.PNG',
+          isRealPhoto: false,
+          mediaKind: 'technical_diagram',
           locationCallout: {
-            vi: 'Đặt ngay bên cạnh máy ảnh OLI-2 ở bụng vệ tinh',
-            en: 'Seated right beside OLI-2 on the Earth-facing deck',
+            vi: 'Đặt cạnh OLI-2 trên khoang thiết bị hướng xuống Trái Đất',
+            en: 'Seated beside OLI-2 on the Earth-facing payload deck',
           },
           hotspotCoords: { x: 64, y: 62 },
           icon: 'Sun',
@@ -847,14 +847,14 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'l9_solar_kid',
-          simpleName: { vi: 'Cánh pin Mặt Trời lớn', en: 'Solar Power Wing' },
+          simpleName: { vi: 'Cánh pin Mặt Trời công suất cao', en: 'High-Efficiency Solar Wing' },
           shortRole: {
-            vi: 'Đón ánh nắng để tạo điện cho vệ tinh làm việc.',
-            en: 'Catches sunlight to make electricity for the satellite.',
+            vi: 'Cung cấp nguồn điện liên tục cho cảm biến quét ảnh và bộ phát sóng.',
+            en: 'Provides electricity for imaging sensors and telemetry transmitters.',
           },
           voiceLine: {
-            vi: 'Cánh pin Mặt Trời đón ánh nắng ấm áp để tạo ra điện cho vệ tinh làm việc.',
-            en: 'The solar wing catches bright sunlight to make electricity for the satellite!',
+            vi: 'Cánh pin Mặt Trời thu năng lượng bức xạ để nuôi toàn bộ cảm biến và máy tính trên vệ tinh.',
+            en: 'The solar wing converts sunlight into electricity for sensors and processors.',
           },
           imageUrl:
             'https://assets.science.nasa.gov/dynamicimage/assets/science/missions/landsat/landsat-9-mission-page/L9-sketch-thumbnail_rotated.png',
@@ -862,7 +862,7 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
           mediaKind: 'technical_diagram',
           locationCallout: {
             vi: 'Cánh pin dài vươn ra bên hông thân vệ tinh',
-            en: 'Long wing stretching out from the side of the body',
+            en: 'Long wing extending laterally from the spacecraft bus',
           },
           hotspotCoords: { x: 25, y: 38 },
           icon: 'Sun',
@@ -870,17 +870,19 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'l9_antenna_kid',
-          simpleName: { vi: 'Ăng-ten gửi ảnh', en: 'Picture Antenna' },
+          simpleName: { vi: 'Ăng-ten truyền dữ liệu X-Band', en: 'X-Band Downlink Antenna' },
           shortRole: {
-            vi: 'Gửi ảnh Trái Đất qua sóng vô tuyến về mặt đất.',
-            en: 'Sends Earth pictures home via radio waves.',
+            vi: 'Truyền tệp ảnh dung lượng lớn về các trạm thu mặt đất trên toàn cầu.',
+            en: 'Transmits high-bandwidth orbital imagery to Earth ground stations.',
           },
           voiceLine: {
-            vi: 'Chiếc ăng-ten này giúp gửi những bức ảnh Trái Đất về cho các cô chú nhà khoa học.',
-            en: 'This antenna beams Earth pictures straight down to scientists on the ground!',
+            vi: 'Ăng-ten băng tần X đảm bảo dữ liệu ảnh từ Landsat 9 được gửi về trạm thu kịp thời.',
+            en: 'The X-band antenna transmits captured imagery down to ground receiving networks.',
           },
-          isRealPhoto: false,
-          mediaKind: 'illustration',
+          imageUrl:
+            'https://assets.science.nasa.gov/dynamicimage/assets/science/esd/eo/images/imagerecords/150000/150482/elizabethtown_oli2_2022281.jpg',
+          isRealPhoto: true,
+          mediaKind: 'real_photo',
           locationCallout: {
             vi: 'Đặt ở mặt dưới hướng sóng về các trạm thu trên Trái Đất',
             en: 'Located on the underside aiming radio beams to Earth',
@@ -892,12 +894,12 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
       ],
       funFact: {
-        vi: 'Chỉ mất 8 ngày là cặp đôi Landsat 9 và Landsat 8 chụp xong ảnh của cả Trái Đất đấy!',
-        en: 'Together with Landsat 8, it takes only 8 days to photograph the whole Earth!',
+        vi: 'Phối hợp cùng vệ tinh Landsat 8, cặp đôi này hoàn thành chu kỳ chụp toàn bộ bề mặt Trái Đất chỉ trong 8 ngày.',
+        en: 'Working alongside Landsat 8, the pair maps Earth’s entire landmass every 8 days.',
       },
       funFactSpeech: {
-        vi: 'Em có biết không? Chỉ mất 8 ngày thôi là vệ tinh Landsat 9 cùng bạn Landsat 8 đã chụp xong ảnh của cả Trái Đất rộng lớn rồi đấy!',
-        en: 'Did you know? Working with its twin Landsat 8, Landsat 9 photographs the entire Earth in just 8 days!',
+        vi: 'Khi kết hợp cùng vệ tinh Landsat 8 bay lệch pha quỹ đạo, Landsat 9 giúp thu thập ảnh toàn bộ Trái Đất cứ mỗi 8 ngày.',
+        en: 'Paired with Landsat 8 in complementary orbit, Landsat 9 completes global coverage every 8 days.',
       },
     },
     introKid: {
@@ -1091,11 +1093,12 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
           },
           icon: 'Sun',
           imageUrl:
-            'https://assets.science.nasa.gov/content/dam/science/missions/landsat/2019/04/GSFC_20181009_TIRS2_33878_EnvironmentalTesting.png/jcr:content/renditions/cq5dam.web.1280.1280.png',
-          isRealPhoto: true,
+            'https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/OLI2-TIRS-2.PNG',
+          isRealPhoto: false,
+          mediaKind: 'technical_diagram',
           imageCaption: {
-            vi: 'Ảnh thật: Cảm biến nhiệt TIRS-2 tại Trung tâm NASA Goddard trước khi phóng.',
-            en: 'Real photo: TIRS-2 instrument undergoing environmental testing at NASA Goddard.',
+            vi: 'Sơ đồ USGS: Vị trí cảm biến nhiệt TIRS-2 và OLI-2 trên vệ tinh Landsat 9.',
+            en: 'USGS diagram: TIRS-2 thermal infrared sensor and OLI-2 mounting on Landsat 9.',
           },
           accuracy: 'FACT',
           sourceIndex: 3,
@@ -1354,33 +1357,33 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
     ],
     preschool: {
       simpleName: {
-        vi: 'Trạm Vũ Trụ ISS',
-        en: 'Space Station (ISS)',
+        vi: 'Trạm Vũ Trụ Quốc Tế (ISS)',
+        en: 'International Space Station (ISS)',
       },
-      badgeEmoji: '🛸',
+      badgeEmoji: '',
       whatIsItSpeech: {
-        vi: 'Ồ! Đây là Trạm Vũ Trụ Quốc Tế ISS — một ngôi nhà khổng lồ biết bay ở ngoài không gian!',
-        en: 'Whoa! This is the International Space Station, a giant flying home in outer space!',
+        vi: 'Đây là Trạm Vũ Trụ Quốc Tế ISS — phòng thí nghiệm vi trọng lực bay quanh Trái Đất ở độ cao khoảng 420 km.',
+        en: 'This is the International Space Station, a microgravity laboratory orbiting Earth at 420 km.',
       },
       usedForShort: {
-        vi: 'Ngôi nhà trong không gian, nơi các phi hành gia sống và làm thí nghiệm.',
-        en: 'A home in space where astronauts live and do fun science experiments.',
+        vi: 'Phòng thí nghiệm quỹ đạo nơi các phi hành gia sinh sống, nghiên cứu vi trọng lực và quản lý lưới điện mặt trời.',
+        en: 'An orbital laboratory where astronauts live, run microgravity research, and manage solar-battery power.',
       },
       usedForSpeech: {
-        vi: 'ISS là ngôi nhà trong không gian, nơi các cô chú phi hành gia sống, bay lơ lửng và làm thí nghiệm.',
-        en: 'The ISS is a home in space where astronauts live, float around, and do science experiments.',
+        vi: 'Trạm ISS duy trì môi trường sống và thí nghiệm khoa học trong điều kiện vi trọng lực với 16 chu kỳ ngày đêm mỗi ngày.',
+        en: 'The ISS maintains life support and microgravity laboratories across 16 day-night orbital cycles daily.',
       },
       parts: [
         {
           id: 'iss_solar_kid',
-          simpleName: { vi: 'Cánh pin Mặt Trời lớn', en: 'Giant Solar Wings' },
+          simpleName: { vi: 'Mảng cánh pin Mặt Trời (SAW)', en: 'Solar Array Wings' },
           shortRole: {
-            vi: 'Đón ánh nắng để tạo điện thắp sáng ngôi nhà.',
-            en: 'Catches sunlight to power the space home.',
+            vi: 'Thu ánh nắng Mặt Trời tạo điện công suất lớn cho các khoang thí nghiệm và hệ dưỡng khí.',
+            en: 'Converts sunlight into high-capacity power for science racks and life support.',
           },
           voiceLine: {
-            vi: 'Những cánh pin Mặt Trời khổng lồ này đón ánh nắng để tạo điện thắp sáng cho cả ngôi nhà.',
-            en: 'These giant solar wings catch sunlight to power the whole space station!',
+            vi: 'Các cánh pin Mặt Trời khổng lồ cung cấp năng lượng chính khi trạm bay qua vùng ban ngày.',
+            en: 'Massive solar wings generate primary electricity while the station travels in sunlight.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss073e0850593/iss073e0850593~large.jpg',
           isRealPhoto: true,
@@ -1395,21 +1398,21 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'iss_rooms_kid',
-          simpleName: { vi: 'Phòng ở & thí nghiệm', en: 'Living & Lab Rooms' },
+          simpleName: { vi: 'Khoang thí nghiệm & hỗ trợ sự sống', en: 'Science & Life-Support Modules' },
           shortRole: {
-            vi: 'Nơi phi hành gia ngủ, ăn uống và trồng cây.',
-            en: 'Where astronauts sleep, eat, and do experiments.',
+            vi: 'Nơi lắp đặt tủ nghiên cứu, hệ tái chế nước sạch và tạo khí oxy cho phi hành đoàn.',
+            en: 'Houses science racks, water recovery units, and oxygen generators for the crew.',
           },
           voiceLine: {
-            vi: 'Bên trong có các căn phòng ấm áp để phi hành gia ăn, ngủ và trồng cây xanh đấy!',
-            en: 'Inside are cozy rooms where astronauts eat, sleep, and even grow little plants!',
+            vi: 'Bên trong các mô-đun điều áp là hệ thống hỗ trợ sự sống và các tủ thiết bị thí nghiệm khoa học.',
+            en: 'Pressurized modules contain crew life support and scientific research racks.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss075e0046813/iss075e0046813~large.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Cụm ống khoang màu trắng nối liền nhau ở giữa trạm',
-            en: 'Connected white cylindrical rooms right in the center',
+            vi: 'Cụm mô-đun điều áp màu trắng nối liền ở trung tâm trạm',
+            en: 'Connected white cylindrical modules in the center',
           },
           hotspotCoords: { x: 52, y: 55 },
           icon: 'Rocket',
@@ -1417,21 +1420,21 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'iss_arm_kid',
-          simpleName: { vi: 'Cánh tay robot hỗ trợ', en: 'Helper Robot Arm' },
+          simpleName: { vi: 'Hệ thống tản nhiệt & bảo trì ngoài trạm', en: 'Thermal Radiators & Exterior Maintenance' },
           shortRole: {
-            vi: 'Giúp nâng đồ và sửa chữa bên ngoài trạm.',
-            en: 'Lifts equipment and helps fix the station exterior.',
+            vi: 'Giải phóng lượng nhiệt dư từ máy tính và khoang ở ra ngoài không gian.',
+            en: 'Radiates excess heat from onboard electronics and living modules into space.',
           },
           voiceLine: {
-            vi: 'Bên ngoài trạm còn có cánh tay robot dài giúp nâng đồ nặng và sửa chữa ngôi nhà.',
-            en: 'Outside the station is a robot arm that lifts heavy things and helps make repairs!',
+            vi: 'Hệ thống tuần hoàn nhiệt bên ngoài giúp các thiết bị không bị quá nóng khi hướng về phía Mặt Trời.',
+            en: 'Exterior ammonia cooling loops keep onboard modules within safe thermal limits.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss073e0657546/iss073e0657546~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Gắn ở bên ngoài thân khung xương chính của trạm',
-            en: 'Mounted outside along the main truss backbone',
+            vi: 'Gắn bên ngoài khung giàn xương sống của trạm',
+            en: 'Mounted along the exterior main truss backbone',
           },
           hotspotCoords: { x: 60, y: 42 },
           icon: 'Wrench',
@@ -1439,14 +1442,14 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'iss_battery_kid',
-          simpleName: { vi: 'Khối pin & chia điện ban đêm', en: 'Night Power Batteries' },
+          simpleName: { vi: 'Khối pin Li-Ion & phân phối điện', en: 'Li-Ion Storage Batteries' },
           shortRole: {
-            vi: 'Cất điện để bật đèn khi trạm bay vào vùng tối.',
-            en: 'Saves electricity so lights stay bright in space shadows.',
+            vi: 'Tích trữ năng lượng để duy trì điện ổn định suốt 45 phút trạm đi vào vùng tối.',
+            en: 'Stores electrical energy to keep systems powered through 45-minute orbital eclipses.',
           },
           voiceLine: {
-            vi: 'Những khối pin gắn trên khung giàn này cất điện dự trữ để bật đèn khi trạm bay vào bóng tối.',
-            en: 'These truss battery units save extra electricity so lights stay on in the dark!',
+            vi: 'Các khối pin Li-Ion gắn trên khung giàn đảm bảo hệ dưỡng khí không gián đoạn khi trạm vào vùng bóng Trái Đất.',
+            en: 'Truss-mounted Li-Ion battery banks maintain power during Earth shadow passes.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/05pd0995/05pd0995~medium.jpg',
           isRealPhoto: true,
@@ -1461,12 +1464,12 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
       ],
       funFact: {
-        vi: 'Các phi hành gia trên trạm ISS được ngắm Mặt Trời mọc tới 16 lần mỗi ngày!',
-        en: 'Astronauts on the ISS get to see 16 sunrises every single day!',
+        vi: 'Trạm ISS bay với vận tốc khoảng 28.000 km/h, hoàn thành 16 vòng quanh Trái Đất và 16 chu kỳ ngày-đêm mỗi ngày.',
+        en: 'The ISS travels at ~28,000 km/h, completing 16 orbits and day-night cycles daily.',
       },
       funFactSpeech: {
-        vi: 'Em có biết không? Vì bay rất nhanh vòng quanh Trái Đất, các phi hành gia trên trạm ISS được ngắm Mặt Trời mọc tới 16 lần mỗi ngày đấy!',
-        en: 'Did you know? Because it zooms so fast around Earth, astronauts on the ISS see 16 sunrises every day!',
+        vi: 'Với tốc độ khoảng 28.000 km/h, bạn có thể thấy trạm ISS đi qua 16 lần Mặt Trời mọc và 16 lần Mặt Trời lặn trong một ngày.',
+        en: 'At ~28,000 km/h, the ISS experiences 16 sunrises and 16 sunsets every 24 hours.',
       },
     },
     introKid: {
@@ -1920,40 +1923,40 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
     ],
     preschool: {
       simpleName: {
-        vi: 'Cánh Tay Robot Canadarm2',
-        en: 'Canadarm2 Robot Arm',
+        vi: 'Cánh tay robot Canadarm2',
+        en: 'Canadarm2 Robotic Arm',
       },
-      badgeEmoji: '🦾',
+      badgeEmoji: '',
       whatIsItSpeech: {
-        vi: 'Chào bé! Đây là Canadarm2 — một cánh tay robot siêu khỏe ở ngoài không gian đấy!',
-        en: 'Hi there! This is Canadarm2, a super-strong giant robot arm in outer space!',
+        vi: 'Đây là Canadarm2 — hệ thống tay máy 7 khớp dài 17,6 m hỗ trợ bắt tàu tiếp tế và bảo trì ngoài Trạm Vũ Trụ ISS.',
+        en: 'This is Canadarm2, a 17.6 m 7-joint robotic manipulator supporting cargo capture and exterior ISS maintenance.',
       },
       usedForShort: {
-        vi: 'Cánh tay robot khổng lồ giúp phi hành gia di chuyển và sửa chữa thiết bị ngoài không gian.',
-        en: 'A giant robot arm that helps astronauts move and fix things in space.',
+        vi: 'Di chuyển thiết bị nặng ngoài không gian, hỗ trợ phi hành gia và gắp nối ghép các tàu chở hàng.',
+        en: 'Moves heavy hardware in orbit, assists spacewalkers, and grapples visiting cargo ships.',
       },
       usedForSpeech: {
-        vi: 'Canadarm2 là cánh tay robot khổng lồ giúp phi hành gia di chuyển và sửa chữa thiết bị ngoài không gian.',
-        en: 'Canadarm2 is a giant robot arm that helps astronauts move around and repair equipment in space.',
+        vi: 'Canadarm2 dùng 7 khớp xoay cơ điện và hai đầu kẹp giống nhau ở hai đầu để làm việc chính xác ngoài thân trạm ISS.',
+        en: 'Canadarm2 uses 7 motorized joints and twin grappling hands to operate precisely outside the ISS.',
       },
       parts: [
         {
           id: 'arm_hand_kid',
-          simpleName: { vi: 'Bàn tay nắm chặt (LEE)', en: 'Grabber Hand (LEE)' },
+          simpleName: { vi: 'Đầu kẹp giữ chốt LEE', en: 'Latching End Effector (LEE)' },
           shortRole: {
-            vi: 'Nắm giữ chặt tàu vũ trụ và đồ vật nặng.',
-            en: 'Grabs and locks onto spaceships and tools.',
+            vi: 'Khóa chặt vào chốt neo tàu chở hàng và các điểm cấp nguồn trên vỏ trạm.',
+            en: 'Locks firmly onto cargo spacecraft grapple fixtures and station power bases.',
           },
           voiceLine: {
-            vi: 'Đây là bàn tay nắm chặt! Có thể bắt lấy các tàu chở hàng bay tới trạm vũ trụ.',
-            en: 'This is the grabber hand! It catches supply spaceships flying up to the station.',
+            vi: 'Đầu kẹp LEE sử dụng hệ cáp siết chính xác để bắt và khóa tàu chở hàng trong trạng thái vi trọng lực.',
+            en: 'The LEE end effector uses precision snare cables to capture cargo capsules in microgravity.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss075e0014476/iss075e0014476~large.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
             vi: 'Gắn ở cả hai đầu mút của cánh tay robot',
-            en: 'Identical grappling hands placed at both arm tips',
+            en: 'Identical grappling ends placed at both arm tips',
           },
           hotspotCoords: { x: 75, y: 36 },
           icon: 'Wrench',
@@ -1961,21 +1964,21 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'arm_tube_kid',
-          simpleName: { vi: 'Cánh tay ống siêu dài', en: 'Long Carbon Booms' },
+          simpleName: { vi: 'Thân ống sợi carbon 17,6 m', en: '17.6 m Carbon-Fiber Booms' },
           shortRole: {
-            vi: 'Vươn thật xa để với tới mọi chỗ bên ngoài trạm.',
-            en: 'Reaches far out to any spot around the station.',
+            vi: 'Vươn tới các vị trí xa bên ngoài trạm mà vẫn giữ độ cứng vững cao và khối lượng nhẹ.',
+            en: 'Extends to outer station modules while remaining rigid and lightweight.',
           },
           voiceLine: {
-            vi: 'Cánh tay dài bằng cả một chiếc xe buýt lớn để vươn tới mọi nơi ngoài trạm.',
-            en: 'These long tubes reach far out—almost as long as a school bus!',
+            vi: 'Hai đoạn ống sợi carbon nhiều lớp giúp cánh tay chịu tải hàng chục tấn trong môi trường không trọng lượng.',
+            en: 'Twin layered carbon-fiber booms allow the arm to maneuver massive payloads smoothly.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss072e576480/iss072e576480~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Hai đoạn ống trắng dài tạo nên thân cánh tay',
-            en: 'Two long white carbon-fiber tubes forming the arm',
+            vi: 'Hai đoạn ống dài tạo nên thân chính cánh tay',
+            en: 'Two long carbon-fiber tubes forming the arm booms',
           },
           hotspotCoords: { x: 46, y: 52 },
           icon: 'Sliders',
@@ -1983,20 +1986,20 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'arm_joint_kid',
-          simpleName: { vi: 'Khớp xoay dẻo dai', en: 'Bendable Joints' },
+          simpleName: { vi: 'Cụm 7 khớp xoay cơ điện', en: '7 Motorized Rotary Joints' },
           shortRole: {
-            vi: 'Gập và xoay mọi hướng giống khuỷu tay của bé.',
-            en: 'Bends and turns smoothly just like your arm.',
+            vi: 'Gập và xoay theo 7 bậc tự do để né tấm pin Mặt Trời và tiếp cận đúng góc ghép.',
+            en: 'Provides 7 degrees of freedom to steer around solar arrays cleanly.',
           },
           voiceLine: {
-            vi: 'Các khớp xoay giúp cánh tay gập lại và duỗi ra dễ dàng như cánh tay của chúng mình!',
-            en: 'Bendable joints help the arm twist, turn, and bend just like your own arm!',
+            vi: 'Cấu trúc 7 khớp xoay giúp bạn điều chỉnh góc khuỷu và cổ tay linh hoạt mà đầu kẹp vẫn giữ đúng mục tiêu.',
+            en: 'Seven rotary joints let you route the elbow past obstacles while holding target alignment.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss072e574907/iss072e574907~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Nằm tại vai, khuỷu giữa và cổ tay giúp uốn cong né vật cản',
+            vi: 'Nằm tại cụm vai, khuỷu giữa và cổ tay cánh tay robot',
             en: 'Positioned at the shoulder, middle elbow, and wrist',
           },
           hotspotCoords: { x: 56, y: 66 },
@@ -2005,14 +2008,14 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'arm_cam_kid',
-          simpleName: { vi: 'Đầu ngắm camera hỗ trợ', en: 'Helper Alignment Cameras' },
+          simpleName: { vi: 'Hệ camera ngắm chốt & khớp', en: 'Alignment & Wrist Cameras' },
           shortRole: {
-            vi: 'Giúp phi hành gia nhìn rõ tâm ngắm khi điều khiển.',
-            en: 'Helps astronauts see crosshairs while steering.',
+            vi: 'Cung cấp góc nhìn trực tiếp để người điều khiển căn tâm chốt neo chính xác.',
+            en: 'Provides direct optical crosshair views for precise pin capture.',
           },
           voiceLine: {
-            vi: 'Đôi mắt camera gắn trên đầu kẹp và khớp khuỷu giúp các phi hành gia nhìn thật rõ để bắt tàu an toàn.',
-            en: 'Watchful cameras on the arm let astronauts line up cargo pins safely!',
+            vi: 'Camera gắn tại đầu kẹp và khuỷu giúp căn chỉnh sai số từng milimét trước khi khóa tàu tiếp tế.',
+            en: 'Wrist and elbow cameras enable millimeter-accurate visual alignment before capture.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/iss071e384199/iss071e384199~medium.jpg',
           isRealPhoto: true,
@@ -2027,12 +2030,12 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
       ],
       funFact: {
-        vi: 'Cánh tay robot này có thể tự "bò" từ chỗ này sang chỗ khác trên trạm như chú sâu đo!',
-        en: 'This robot arm can walk across the outside of the space station like an inchworm!',
+        vi: 'Vì hai đầu đều có đầu kẹp giống nhau, Canadarm2 có thể tự di chuyển từng bước dọc theo các ổ chốt bên ngoài trạm ISS.',
+        en: 'With identical hands on both ends, Canadarm2 walks hand-over-hand across ISS anchor points.',
       },
       funFactSpeech: {
-        vi: 'Em có biết không? Cánh tay Canadarm2 có hai bàn tay ở hai đầu nên có thể tự bò đi khắp trạm vũ trụ như chú sâu đo đấy!',
-        en: 'Did you know? Canadarm2 has hands on both ends so it can walk around the space station like an inchworm!',
+        vi: 'Nhờ hai đầu kẹp giống hệt nhau, Canadarm2 có thể tự di chuyển qua các ổ chốt điện dọc theo toàn bộ chiều dài trạm ISS.',
+        en: 'Because both ends have identical grapple hands, Canadarm2 can walk along anchor fixtures across the ISS.',
       },
     },
     introKid: {
@@ -2497,33 +2500,33 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
     ],
     preschool: {
       simpleName: {
-        vi: 'Kính Thiên Văn Hubble',
+        vi: 'Kính thiên văn không gian Hubble',
         en: 'Hubble Space Telescope',
       },
-      badgeEmoji: '🔭',
+      badgeEmoji: '',
       whatIsItSpeech: {
-        vi: 'Chào nhà ngắm sao nhí! Đây là kính thiên văn Hubble đang bay cao để ngắm bầu trời vũ trụ!',
-        en: 'Hi little stargazer! This is Hubble, a giant space telescope floating high to look at the stars!',
+        vi: 'Đây là kính thiên văn không gian Hubble đang vận hành ở độ cao ~540 km phía trên bầu khí quyển Trái Đất.',
+        en: 'This is the Hubble Space Telescope operating ~540 km above Earth’s turbulent atmosphere.',
       },
       usedForShort: {
-        vi: 'Kính thiên văn bay trong không gian, giúp con người nhìn thấy các ngôi sao và thiên hà.',
-        en: 'A telescope flying in space that helps us see distant stars and galaxies.',
+        vi: 'Quan sát thiên hà xa, tinh vân và đo bức xạ cực tím/hồng ngoại mà không bị nhiễu loạn khí quyển.',
+        en: 'Observes distant galaxies and nebulae across UV, visible, and infrared bands without atmospheric distortion.',
       },
       usedForSpeech: {
-        vi: 'Hubble là kính thiên văn bay trong không gian, giúp con người nhìn thấy các ngôi sao và thiên hà lung linh.',
-        en: 'Hubble is a telescope in space that helps people see shimmering stars and galaxies far away.',
+        vi: 'Hubble thu ánh sáng vũ trụ bằng gương chính 2,4 mét và giữ ổn định góc ngắm bằng hệ bánh đà phản lực và cảm biến dẫn đường FGS.',
+        en: 'Hubble focuses faint cosmic light with a 2.4 m mirror while reaction wheels and FGS hold steady aim.',
       },
       parts: [
         {
           id: 'hst_mirror_kid',
-          simpleName: { vi: 'Gương lớn đón ánh sao', en: 'Giant Star Mirror' },
+          simpleName: { vi: 'Gương chính đường kính 2,4 m', en: '2.4 m Primary Mirror' },
           shortRole: {
-            vi: 'Hứng ánh sáng từ các ngôi sao ở rất xa.',
-            en: 'Collects light from faraway stars and galaxies.',
+            vi: 'Hội tụ ánh sáng yếu ớt từ các thiên hà và tinh vân cách hàng tỷ năm ánh sáng.',
+            en: 'Collects and focuses faint light from distant galaxies and nebulae.',
           },
           voiceLine: {
-            vi: 'Đây là chiếc gương khổng lồ sáng bóng! Giúp hứng ánh sáng từ các ngôi sao ở rất xa.',
-            en: 'This is the shiny giant mirror! It collects light from stars far, far away.',
+            vi: 'Gương phản xạ chính rộng 2,4 mét gom ánh sáng vũ trụ với độ chính xác cực cao về khoang máy ảnh.',
+            en: 'The 2.4-meter primary mirror focuses distant starlight into the scientific instruments.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/8218871/8218871~medium.jpg',
           isRealPhoto: true,
@@ -2538,14 +2541,14 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'hst_cam_kid',
-          simpleName: { vi: 'Máy ảnh chụp bầu trời (WFC3)', en: 'Star Camera (WFC3)' },
+          simpleName: { vi: 'Máy ảnh trường rộng WFC3', en: 'Wide Field Camera 3 (WFC3)' },
           shortRole: {
-            vi: 'Chụp ảnh các ngôi sao và tinh vân đầy màu sắc.',
-            en: 'Takes crisp photos of stars and colorful nebulae.',
+            vi: 'Chụp ảnh đa dải phổ từ tia cực tím đến ánh sáng khả kiến và hồng ngoại.',
+            en: 'Captures deep-field imagery across ultraviolet, visible, and near-infrared spectra.',
           },
           voiceLine: {
-            vi: 'Máy ảnh đặc biệt này chụp lại những bức ảnh ngôi sao và đám mây vũ trụ đầy màu sắc.',
-            en: 'This special camera snaps gorgeous, colorful photos of stars and space clouds!',
+            vi: 'Máy ảnh WFC3 ghi nhận chi tiết tinh vân và các thiên hà trẻ ở rìa vũ trụ.',
+            en: 'WFC3 records detailed multi-wavelength images of nebulae and distant galaxies.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/KSC-08pd2457/KSC-08pd2457~medium.jpg',
           isRealPhoto: true,
@@ -2560,21 +2563,21 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'hst_solar_kid',
-          simpleName: { vi: 'Đôi cánh pin Mặt Trời', en: 'Solar Wings' },
+          simpleName: { vi: 'Hai cánh pin Mặt Trời', en: 'Twin Solar Arrays' },
           shortRole: {
-            vi: 'Lấy năng lượng từ nắng Mặt Trời để tạo điện.',
-            en: 'Catches sunlight to power cameras and sensors.',
+            vi: 'Cung cấp điện năng cho hệ thống máy tính, cảm biến định hướng FGS và máy ảnh.',
+            en: 'Powers avionics, Fine Guidance Sensors, and scientific cameras.',
           },
           voiceLine: {
-            vi: 'Hai đôi cánh pin Mặt Trời cung cấp điện để kính Hubble thức cả ngày lẫn đêm.',
-            en: 'Two solar wings give Hubble plenty of power to watch the sky day and night!',
+            vi: 'Hai cánh pin Mặt Trời cấp nguồn liên tục giúp kính Hubble duy trì hoạt động quan sát ổn định.',
+            en: 'Twin solar arrays supply steady electrical power throughout Hubble’s orbital passes.',
           },
           imageUrl: 'https://images-assets.nasa.gov/image/KSC-01pp1636/KSC-01pp1636~medium.jpg',
           isRealPhoto: true,
           mediaKind: 'real_photo',
           locationCallout: {
-            vi: 'Hai cánh màu xanh dương xòe ra hai bên thân kính',
-            en: 'Twin blue panels extending from both sides of Hubble',
+            vi: 'Hai cánh xòe đối xứng hai bên thân ống kính Hubble',
+            en: 'Twin panels extending symmetrically from Hubble’s body',
           },
           hotspotCoords: { x: 25, y: 50 },
           icon: 'Sun',
@@ -2582,20 +2585,21 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
         {
           id: 'hst_balance_kid',
-          simpleName: { vi: 'Bánh đà giữ thăng bằng', en: 'Balance Wheels' },
+          simpleName: { vi: 'Bánh đà phản lực & cảm biến FGS', en: 'Reaction Wheels & FGS' },
           shortRole: {
-            vi: 'Giữ kính đứng thật yên để ảnh ngôi sao không bị mờ.',
-            en: 'Keeps the telescope rock-steady for sharp photos.',
+            vi: 'Xoay kính êm ái không dùng khí đốt và khóa chặt tiêu điểm chống rung nhòe.',
+            en: 'Slews the telescope smoothly without exhaust and locks onto guide stars.',
           },
           voiceLine: {
-            vi: 'Bên trong có các bánh đà quay tròn giúp kính đứng thật yên để chụp ảnh không bị rung!',
-            en: 'Spinning balance wheels inside keep Hubble super still so star photos stay crisp!',
+            vi: 'Nếu bánh đà hoặc cảm biến FGS gặp rung động, ảnh phơi sáng lâu của bạn sẽ bị mờ nhòe ngay lập tức.',
+            en: 'If reaction wheels or FGS experience jitter, long-exposure images immediately blur.',
           },
+          imageUrl: 'https://science.nasa.gov/wp-content/uploads/2023/04/hubbleinstruments-graphic.gif',
           isRealPhoto: false,
-          mediaKind: 'illustration',
+          mediaKind: 'technical_diagram',
           locationCallout: {
-            vi: 'Đặt kín bên trong thân kính gần khoang thiết bị',
-            en: 'Housed inside the spacecraft equipment section',
+            vi: 'Bố trí quanh khoang thiết bị khoa học ở phần thân sau',
+            en: 'Positioned around the aft equipment bay and instrument section',
           },
           hotspotCoords: { x: 46, y: 57 },
           illustrationKind: 'balance_wheel',
@@ -2604,12 +2608,12 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         },
       ],
       funFact: {
-        vi: 'Hubble bay cao hơn mọi đám mây, nên ảnh chụp các ngôi sao rõ nét hơn hẳn ở mặt đất!',
-        en: 'Hubble floats high above every cloud, so its star photos are super crystal clear!',
+        vi: 'Hubble bay trên tầng khí quyển nên không bị nhiễu loạn không khí, giúp ảnh sâu hàng tỷ năm ánh sáng luôn sắc nét.',
+        en: 'Operating above Earth’s blurring atmosphere allows Hubble to resolve light billions of light-years away.',
       },
       funFactSpeech: {
-        vi: 'Em có biết không? Kính Hubble bay cao hơn tất cả các đám mây trên trời, nên chụp ảnh các ngôi sao rõ nét gấp nhiều lần ở mặt đất đấy!',
-        en: 'Did you know? Hubble flies above all the clouds, so its photos of stars are crystal clear!',
+        vi: 'Nhờ đặt bên ngoài lớp khí quyển nhiễu loạn, Hubble đạt độ ổn định hướng ngắm tới 0,007 giây cung khi chụp thiên hà sâu.',
+        en: 'By orbiting above Earth’s turbulent air, Hubble achieves 0.007-arcsecond pointing stability.',
       },
     },
     introKid: {
@@ -2723,7 +2727,7 @@ export const NASA_EQUIPMENT_PROFILES: MissionEquipmentProfile[] = [
         vi: [
           'Độ chính xác khi ngắm sao của Hubble giống như bạn chiếu đèn tia laser trúng một đồng xu cách xa tới 320 km mà không bị run tay!',
           'Hubble được thiết kế theo từng ngăn tháo lắp nên các phi hành gia đã bay lên vũ trụ 5 lần (1993–2009) để thay pin và lắp máy ảnh mới cho kính!',
-          'Bức ảnh "Hubble Ultra Deep Field" do kính chụp trên một khoảng trời bé tí đã phát hiện tới ~10.000 thiên hà!',
+          'Bức ảnh "Hubble Ultra Deep Field" do kính chụp trên một khoảng trời rất hẹp đã phát hiện tới ~10.000 thiên hà!',
         ],
         en: [
           'Hubble’s pointing steadiness is like shining a laser beam on a dime 200 miles (320 km) away without shaking!',

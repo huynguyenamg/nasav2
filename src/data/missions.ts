@@ -43,8 +43,8 @@ export const COMPONENTS: SpacecraftComponent[] = [
     category: 'chassis',
     name: { vi: 'Khung Khối Cube Explorer', en: 'Compact Cube Chassis' },
     desc: {
-      vi: 'Khung hình hộp gọn gàng, chi phí thấp, tối ưu cho học viên nhí lắp ráp nhanh.',
-      en: 'Compact modular cube layout, affordable and ideal for junior cadets starting their first mission.',
+      vi: 'Khung hình hộp gọn gàng, chi phí thấp, phù hợp để bạn lắp ráp nhanh trong các nhiệm vụ cơ bản.',
+      en: 'Compact modular cube layout, affordable and ideal for starting your mission.',
     },
     icon: 'Box',
     massKg: 95,
@@ -341,8 +341,8 @@ export const MISSIONS: MissionConfig[] = [
       en: 'Explore ancient Jezero Crater lakebed and search for biosignatures',
     },
     briefing: {
-      vi: 'Chào kỹ sư nhí! Mục tiêu của em là chế tạo một robot tự hành hoàn chỉnh để hạ cánh xuống Jezero Crater trên Sao Hỏa. Robot phải có khả năng di chuyển trên địa hình gồ ghề, chụp ảnh địa chất, bắn tia laser phân tích đá và truyền dữ liệu về Trái Đất an toàn.',
-      en: 'Welcome cadet engineer! Your goal is to design a resilient rover to land in Jezero Crater on Mars. The rover must traverse rugged terrain, take high-res geological photos, analyze rock chemistry, and beam data back to Earth.',
+      vi: 'Chào bạn! Mục tiêu của bạn là thiết kế và vận hành robot tự hành Perseverance tại miệng hố Jezero trên Sao Hỏa. Robot phải di chuyển qua địa hình đá cát, chụp ảnh địa chất, bắn tia laser phân tích đá và truyền dữ liệu về Trái Đất an toàn.',
+      en: 'Welcome! Your goal is to design and operate a resilient rover in Jezero Crater on Mars. The rover must traverse rugged terrain, take high-res geological photos, analyze rock chemistry, and beam data back to Earth.',
     },
     nasaContext: {
       vi: 'Miệng hố Jezero từng là một hồ nước sâu 250m cách đây 3.7 tỷ năm, với dòng sông cổ bồi tụ phù sa delta giàu đất sét. Đây là nơi lý tưởng nhất để xe Perseverance thu thập các mẫu đất đá.',
@@ -558,7 +558,7 @@ export const MISSIONS: MissionConfig[] = [
       en: 'Balance microgravity science laboratory power across day-and-night cycles',
     },
     briefing: {
-      vi: 'Trạm vũ trụ bay quanh Trái Đất mỗi 90 phút, trong đó có 45 phút ban ngày rực rỡ và 45 phút ban đêm hoàn toàn trong bóng tối của Trái Đất. Em phải thiết kế hệ thống pin và điều phối điện để các thí nghiệm sinh học không bị gián đoạn.',
+      vi: 'Trạm vũ trụ bay quanh Trái Đất mỗi 90 phút, trong đó có 45 phút ban ngày rực rỡ và 45 phút ban đêm hoàn toàn trong bóng tối của Trái Đất. Bạn cần cân bằng hệ thống pin và điều phối điện để các thí nghiệm sinh học và hệ dưỡng khí không bị gián đoạn.',
       en: 'The station orbits Earth every 90 minutes—45 minutes in sunlight, 45 minutes in dark Earth eclipse. Balance solar panels and battery storage to keep life support and science racks energized.',
     },
     nasaContext: {
@@ -639,7 +639,7 @@ export const MISSIONS: MissionConfig[] = [
       en: 'Manipulate robotic joints to grapple cargo spacecraft in microgravity',
     },
     briefing: {
-      vi: 'Tàu hàng tự hành chở đồ ăn và dụng cụ khoa học đang tiếp cận trạm ở khoảng cách 10 mét. Em cần điều khiển cánh tay robot đa khớp gắp chặt chốt neo và đưa tàu vào cửa nối ghép an toàn.',
+      vi: 'Tàu hàng tự hành chở nhu yếu phẩm và dụng cụ khoa học đang tiếp cận trạm ở khoảng cách 10 mét. Bạn cần điều khiển cánh tay robot đa khớp gắp chặt chốt neo và đưa tàu vào cửa nối ghép an toàn.',
       en: 'An uncrewed cargo resupply capsule is holding 10 meters outside the station. Operate the multi-joint robotic manipulator to grapple the capture pin safely without collision.',
     },
     nasaContext: {
@@ -720,8 +720,8 @@ export const MISSIONS: MissionConfig[] = [
       en: 'Peer into cosmic dawn and detect atmospheric signatures on distant exoplanets',
     },
     briefing: {
-      vi: 'Kính thiên văn mặt đất bị cản trở bởi bầu khí quyển rung động và ô nhiễm ánh sáng. Em hãy thiết kế một đài quan sát không gian đặt tại điểm cân bằng Lagrange L2 để chụp những thiên hà xa xôi nhất.',
-      en: 'Earth atmosphere blurs starlight. Engineer a space observatory stationed at Sun-Earth Lagrange Point 2 (L2) to image the earliest galaxies and spectra of alien worlds.',
+      vi: 'Kính thiên văn mặt đất bị cản trở bởi bầu khí quyển nhiễu loạn và ô nhiễm ánh sáng. Bạn hãy thiết kế và hiệu chuẩn đài quan sát không gian để thu thập dữ liệu những thiên hà xa xôi nhất.',
+      en: 'Earth atmosphere blurs starlight. Engineer and calibrate a space observatory to image distant galaxies and exoplanet spectra.',
     },
     nasaContext: {
       vi: 'Kính viễn vọng James Webb có gương mạ vàng đường kính 6.5m và tấm chắn nhiệt 5 lớp kích thước bằng sân tennis để giữ nhiệt độ ở mức -233°C.',

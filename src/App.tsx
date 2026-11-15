@@ -10,8 +10,15 @@ import {
   MissionSessionState,
 } from './types/game';
 import { MISSIONS } from './data/missions';
-import { createAssemblySession, getRemainingBudget } from './data/equipmentSystems';
-import { storage } from './services/storage';
+import {
+  createAssemblySession,
+  createBudgetFailureReport,
+  evaluateBudgetStatusAndFailure,
+  evaluateMissionOutcome,
+  getLocalizedBudgetFailure,
+  getRemainingBudget,
+} from './data/equipmentSystems';
+import { getDisplayCadetName, storage } from './services/storage';
 import { sound } from './services/sound';
 import { Navbar } from './components/Navbar';
 import { NovaChatModal } from './components/NovaChatModal';
@@ -35,7 +42,7 @@ export default function App() {
   const [currentMissionId, setCurrentMissionId] = useState<MissionId>('mission_01_mars_rover');
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel>(1);
   const [missionSession, setMissionSession] = useState<MissionSessionState>(() =>
-    createAssemblySession('mission_01_mars_rover', 1)
+    createAssemblySession('mission_01_mars_rover', 1, undefined, storage.getLanguage())
   );
   const [repairTargetSubsystem, setRepairTargetSubsystem] =
     useState<EquipmentSubsystemId | null>(null);
@@ -48,6 +55,10 @@ export default function App() {
   const [isNovaOpen, setIsNovaOpen] = useState(false);
   const [isCadetModalOpen, setIsCadetModalOpen] = useState(false);
   const [debriefReport, setDebriefReport] = useState<MissionEvaluationReport | null>(null);
+  const [lastMissionExtras, setLastMissionExtras] = useState<{ photos: number; samples: number }>({
+    photos: 0,
+    samples: 0,
+  });
 
   // Load language & profile from storage on mount
   useEffect(() => {
@@ -57,30 +68,103 @@ export default function App() {
     setCadet(savedProfile);
   }, []);
 
+  // Recompute open debrief report cleanly when toggling language
+  useEffect(() => {
+    if (!debriefReport) return;
+    if (missionSession.budgetFailure?.failed || debriefReport.budgetExceeded) {
+      setDebriefReport(createBudgetFailureReport(missionSession, lang));
+    } else {
+      setDebriefReport(
+        evaluateMissionOutcome(
+          missionSession,
+          { ...lastMissionExtras, totalSubTasks: 4 },
+          lang
+        )
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
+
+  const handleToggleLang = () => {
+    sound.playClick();
+    sound.stopSpeech();
+    const next: Language = lang === 'vi' ? 'en' : 'vi';
+    setLang(next);
+    storage.saveLanguage(next);
+  };
+
   const currentMission = MISSIONS.find((m) => m.id === currentMissionId) || MISSIONS[0];
 
+  const handleUpdateSession = (rawNextSession: MissionSessionState) => {
+    if (currentZone === 'design_lab') {
+      setMissionSession({
+        ...rawNextSession,
+        budgetFailure: null,
+      });
+      return;
+    }
+
+    if (
+      missionSession.budgetFailure?.failed &&
+      rawNextSession.missionId === missionSession.missionId &&
+      rawNextSession.difficulty === missionSession.difficulty
+    ) {
+      if (!debriefReport) {
+        setDebriefReport(createBudgetFailureReport(missionSession, lang));
+      }
+      return;
+    }
+
+    const evaluated = rawNextSession.budgetFailure?.failed
+      ? rawNextSession
+      : evaluateBudgetStatusAndFailure(rawNextSession, undefined, lang);
+
+    setMissionSession(evaluated);
+
+    if (evaluated.budgetFailure?.failed) {
+      sound.playAlert();
+      sound.stopSpeech();
+      setDebriefReport(createBudgetFailureReport(evaluated, lang));
+    }
+  };
+
   const handleSelectDifficulty = (level: DifficultyLevel) => {
+    setDebriefReport(null);
     setSelectedDifficulty(level);
-    setMissionSession(createAssemblySession(currentMissionId, level));
+    setMissionSession(createAssemblySession(currentMissionId, level, undefined, lang));
     setRepairTargetSubsystem(null);
   };
 
   const handleSelectMission = (id: MissionId, difficulty?: DifficultyLevel) => {
+    setDebriefReport(null);
     const effDiff = difficulty ?? selectedDifficulty;
     if (difficulty !== undefined) {
       setSelectedDifficulty(difficulty);
     }
     setCurrentMissionId(id);
-    setMissionSession(createAssemblySession(id, effDiff));
+    setMissionSession(createAssemblySession(id, effDiff, undefined, lang));
     setRepairTargetSubsystem(null);
   };
 
   const handleOpenRepair = (targetSubsystem?: EquipmentSubsystemId) => {
+    if (missionSession.budgetFailure?.failed) {
+      setDebriefReport(createBudgetFailureReport(missionSession, lang));
+      return;
+    }
     setRepairTargetSubsystem(targetSubsystem || null);
     setCurrentZone('repair_shop');
   };
 
-  const handleMissionDebrief = (report: MissionEvaluationReport) => {
+  const handleMissionDebrief = (
+    report: MissionEvaluationReport,
+    extras?: { photos: number; samples: number }
+  ) => {
+    if (extras) setLastMissionExtras(extras);
+    if (missionSession.budgetFailure?.failed || report.budgetExceeded) {
+      setDebriefReport(createBudgetFailureReport(missionSession, lang));
+      return;
+    }
+
     setDebriefReport(report);
 
     const newXp = cadet.xp + report.xpEarned;
@@ -107,6 +191,7 @@ export default function App() {
   };
 
   const handleAnomalyResolved = (bonusXp = 30) => {
+    if (missionSession.budgetFailure?.failed) return;
     const updated = {
       ...cadet,
       xp: Math.max(0, cadet.xp + bonusXp),
@@ -119,7 +204,7 @@ export default function App() {
 
   const handleReplayMission = () => {
     setDebriefReport(null);
-    setMissionSession(createAssemblySession(currentMissionId, selectedDifficulty));
+    setMissionSession(createAssemblySession(currentMissionId, selectedDifficulty, undefined, lang));
     setRepairTargetSubsystem(null);
     setCurrentZone('design_lab');
   };
@@ -133,10 +218,22 @@ export default function App() {
     setCurrentZone('design_lab');
   };
 
+  const handleResetProgress = () => {
+    const resetProfile = storage.resetProgress();
+    setCadet(resetProfile);
+    setCurrentMissionId('mission_01_mars_rover');
+    setSelectedDifficulty(1);
+    setMissionSession(createAssemblySession('mission_01_mars_rover', 1, undefined, lang));
+    setRepairTargetSubsystem(null);
+    setDebriefReport(null);
+    setLastMissionExtras({ photos: 0, samples: 0 });
+  };
+
   if (isAdminOpen) {
     return (
-      <div className="min-h-screen bg-sky-50 text-sky-950 flex flex-col selection:bg-sky-300 selection:text-sky-950">
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-sky-200 selection:text-slate-900">
         <AdminPortal
+          lang={lang}
           onExit={() => setIsAdminOpen(false)}
           onDataSynced={() => setSyncNonce((prev) => prev + 1)}
         />
@@ -145,12 +242,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-blue-50/70 text-sky-950 flex flex-col selection:bg-sky-300 selection:text-sky-950">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-sky-200 selection:text-slate-900">
       {/* Minimalist 3-Item Top Taskbar */}
       <Navbar
         currentZone={currentZone}
         onNavigate={setCurrentZone}
         lang={lang}
+        onToggleLang={handleToggleLang}
       />
 
       {/* Main Content Body */}
@@ -187,8 +285,14 @@ export default function App() {
             lang={lang}
             mission={currentMission}
             session={missionSession}
-            onUpdateSession={setMissionSession}
-            onProceedToLaunch={() => setCurrentZone('launch_center')}
+            onUpdateSession={handleUpdateSession}
+            onProceedToLaunch={() => {
+              if (getRemainingBudget(missionSession.economy) < 0) {
+                sound.playAlert();
+                return;
+              }
+              setCurrentZone('launch_center');
+            }}
             onBack={() => setCurrentZone('mission_map')}
           />
         )}
@@ -199,8 +303,14 @@ export default function App() {
             lang={lang}
             mission={currentMission}
             session={missionSession}
-            onUpdateSession={setMissionSession}
-            onLaunchComplete={() => setCurrentZone('simulator')}
+            onUpdateSession={handleUpdateSession}
+            onLaunchComplete={() => {
+              if (missionSession.budgetFailure?.failed) {
+                setDebriefReport(createBudgetFailureReport(missionSession, lang));
+                return;
+              }
+              setCurrentZone('simulator');
+            }}
             onBack={() => setCurrentZone('design_lab')}
           />
         )}
@@ -212,7 +322,7 @@ export default function App() {
             lang={lang}
             mission={currentMission}
             session={missionSession}
-            onUpdateSession={setMissionSession}
+            onUpdateSession={handleUpdateSession}
             onOpenRepair={handleOpenRepair}
             onBack={() => setCurrentZone('mission_map')}
             onMissionDebrief={handleMissionDebrief}
@@ -226,7 +336,7 @@ export default function App() {
             mission={currentMission}
             session={missionSession}
             initialTargetSubsystem={repairTargetSubsystem}
-            onUpdateSession={setMissionSession}
+            onUpdateSession={handleUpdateSession}
             onResolved={handleAnomalyResolved}
             onReturnToSim={() => setCurrentZone('simulator')}
           />
@@ -245,17 +355,22 @@ export default function App() {
             cadet={cadet}
             lang={lang}
             onOpenCadetModal={() => setIsCadetModalOpen(true)}
+            onResetProgress={handleResetProgress}
           />
         )}
       </main>
 
-      {/* Clean Light Educational Footer */}
-      <footer className="border-t border-sky-200/80 bg-white/90 px-4 md:px-8 py-4 text-xs text-sky-800/75">
+      {/* Clean Technical Footer */}
+      <footer className="border-t border-slate-200 bg-white px-4 md:px-8 py-4 text-xs text-slate-600">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sky-900 font-display">Học Viện Vũ Trụ NASA</span>
+            <span className="font-bold text-slate-900 font-display">NASA Technical Academy</span>
             <span aria-hidden="true">·</span>
-            <span>Dành cho Kỹ sư Nhí</span>
+            <span>
+              {lang === 'en'
+                ? 'Aerospace Engineering Simulation (Middle School)'
+                : 'Mô phỏng Kỹ thuật Không gian (THCS)'}
+            </span>
           </div>
 
           <div className="flex items-center gap-4 text-xs">
@@ -265,19 +380,19 @@ export default function App() {
                 sound.playClick();
                 setIsAdminOpen(true);
               }}
-              className="text-sky-700 hover:text-sky-500 flex items-center gap-1 transition-colors cursor-pointer font-semibold"
+              className="text-slate-600 hover:text-sky-600 flex items-center gap-1 transition-colors cursor-pointer font-semibold"
             >
-              <Shield className="w-3.5 h-3.5 text-sky-500" />
-              <span>Quản lý dữ liệu</span>
+              <Shield className="w-3.5 h-3.5 text-sky-600" />
+              <span>{lang === 'en' ? 'Data Manager' : 'Quản lý dữ liệu'}</span>
             </button>
           </div>
         </div>
       </footer>
 
-      {/* Floating NOVA AI Mentor Assistant */}
+      {/* Floating NOVA Technical Assistant */}
       <NovaChatModal
         lang={lang}
-        cadetName={cadet.name}
+        cadetName={getDisplayCadetName(cadet.name, lang)}
         ageMode={cadet.ageMode}
         currentMissionId={currentMissionId}
         currentStage={currentZone}
@@ -300,12 +415,13 @@ export default function App() {
         onSave={setCadet}
       />
 
-      {/* Mission Debrief & Reflection Modal */}
+      {/* Mission Debrief & Budget Overrun Modal */}
       <DebriefModal
         cadet={cadet}
         lang={lang}
         mission={currentMission}
         report={debriefReport}
+        budgetFailure={getLocalizedBudgetFailure(missionSession, lang)}
         isOpen={debriefReport !== null}
         onClose={() => setDebriefReport(null)}
         onReplay={handleReplayMission}

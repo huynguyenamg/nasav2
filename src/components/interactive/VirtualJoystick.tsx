@@ -1,16 +1,21 @@
 import React, { useRef, useState } from 'react';
+import { Language } from '../../types/game';
 
 interface VirtualJoystickProps {
   disabled?: boolean;
   onVectorMove: (dxNorm: number, dyNorm: number, angleDeg: number) => void;
   label?: string;
+  lang?: Language;
 }
 
 export const VirtualJoystick: React.FC<VirtualJoystickProps> = ({
   disabled = false,
   onVectorMove,
-  label = 'Cần điều khiển (Kéo thả)',
+  label,
+  lang = 'vi',
 }) => {
+  const resolvedLabel =
+    label || (lang === 'en' ? 'Control Stick (Drag)' : 'Cần điều khiển (Kéo thả)');
   const padRef = useRef<HTMLDivElement>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
   const [active, setActive] = useState(false);
@@ -75,7 +80,7 @@ export const VirtualJoystick: React.FC<VirtualJoystickProps> = ({
         />
       </div>
       <span className="text-[11px] font-extrabold text-sky-950 bg-white/90 px-2 py-0.5 rounded-lg border border-sky-200">
-        {label}
+        {resolvedLabel}
       </span>
     </div>
   );

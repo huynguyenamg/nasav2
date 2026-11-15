@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Language } from '../../types/game';
 import { sound } from '../../services/sound';
 import { AlertTriangle, CheckCircle2, Power, RotateCcw, Zap } from 'lucide-react';
 
@@ -21,6 +22,7 @@ interface CircuitWiringBoardProps {
   leftNodes: WireNode[];
   rightNodes: WireNode[];
   expectedConnections: ExpectedWireConnection[];
+  lang?: Language;
   disabled?: boolean;
   onSuccess: () => void;
   onFault?: (reason: string) => void;
@@ -37,6 +39,7 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
   leftNodes,
   rightNodes,
   expectedConnections,
+  lang = 'vi',
   disabled = false,
   onSuccess,
   onFault,
@@ -55,10 +58,30 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
   const [statusMsg, setStatusMsg] = useState<{
     kind: 'info' | 'ok' | 'error';
     text: string;
+    isDefault?: boolean;
   }>({
     kind: 'info',
     text: instruction,
+    isDefault: true,
   });
+
+  useEffect(() => {
+    setStatusMsg((prev) => {
+      if (prev.isDefault) {
+        return { kind: 'info', text: instruction, isDefault: true };
+      }
+      if (prev.kind === 'ok') {
+        return {
+          kind: 'ok',
+          text:
+            lang === 'en'
+              ? 'Circuit verified and safe! Power and telemetry signals are nominal.'
+              : 'Mạch điện thông suốt và an toàn! Dòng điện & tín hiệu đang chạy ổn định.',
+        };
+      }
+      return prev;
+    });
+  }, [instruction, lang]);
 
   const getPortCenter = (side: 'left' | 'right', id: string) => {
     const board = boardRef.current;
@@ -84,7 +107,10 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
     setSelectedLeft(null);
     setStatusMsg({
       kind: 'info',
-      text: 'Đã nối dây! Hãy hoàn tất tất cả các cổng rồi bật Công tắc Nguồn để kiểm tra mạch.',
+      text:
+        lang === 'en'
+          ? 'Wire connected! Complete all ports, then turn on the Power Switch to verify the circuit.'
+          : 'Đã nối dây! Hãy hoàn tất tất cả các cổng rồi bật Công tắc Nguồn để kiểm tra mạch.',
     });
   };
 
@@ -131,7 +157,10 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
     if (disabled) return;
     if (connections.length < expectedConnections.length) {
       sound.playAlert();
-      const msg = `Mạch chưa khép kín (${connections.length}/${expectedConnections.length} dây)! Hãy nối đủ tất cả cổng trước khi bật nguồn.`;
+      const msg =
+        lang === 'en'
+          ? `Circuit incomplete (${connections.length}/${expectedConnections.length} wires)! Connect all ports before powering on.`
+          : `Mạch chưa khép kín (${connections.length}/${expectedConnections.length} dây)! Hãy nối đủ tất cả cổng trước khi bật nguồn.`;
       setStatusMsg({ kind: 'error', text: msg });
       onFault?.(msg);
       return;
@@ -148,7 +177,9 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
       const fromLabel = leftNodes.find((n) => n.id === mismatch.fromId)?.label || mismatch.fromId;
       const msg =
         mismatch.errorHint ||
-        `Chập/sai cổng tại "${fromLabel}"! Hãy tháo dây sai và nối lại đúng đầu thu tương ứng.`;
+        (lang === 'en'
+          ? `Port mismatch at "${fromLabel}"! Reconnect to the matching receiver terminal.`
+          : `Chập/sai cổng tại "${fromLabel}"! Hãy tháo dây sai và nối lại đúng đầu thu tương ứng.`);
       setStatusMsg({ kind: 'error', text: msg });
       onFault?.(msg);
       return;
@@ -158,7 +189,10 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
     setPowerOn(true);
     setStatusMsg({
       kind: 'ok',
-      text: 'Mạch điện thông suốt và an toàn! Dòng điện & tín hiệu đang chạy ổn định.',
+      text:
+        lang === 'en'
+          ? 'Circuit verified and safe! Power and telemetry signals are nominal.'
+          : 'Mạch điện thông suốt và an toàn! Dòng điện & tín hiệu đang chạy ổn định.',
     });
     onSuccess();
   };
@@ -168,7 +202,7 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
     setConnections([]);
     setSelectedLeft(null);
     setPowerOn(false);
-    setStatusMsg({ kind: 'info', text: instruction });
+    setStatusMsg({ kind: 'info', text: instruction, isDefault: true });
   };
 
   return (
@@ -185,7 +219,7 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
           className="px-3 py-1.5 rounded-xl bg-white hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-bold flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Tháo dây nối lại</span>
+          <span>{lang === 'en' ? 'Reset wires' : 'Tháo dây nối lại'}</span>
         </button>
       </div>
 
@@ -234,10 +268,12 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
           )}
         </svg>
 
-        <div className="grid grid-cols-2 gap-8 sm:gap-16 relative z-20">
+        <div className="grid grid-cols-2 gap-4 sm:gap-12 relative z-20">
           {/* Left Source Ports */}
           <div className="space-y-2.5">
-            <div className="text-[11px] font-extrabold text-sky-700">Cổng nguồn / Phát</div>
+            <div className="text-[11px] font-extrabold text-sky-700">
+              {lang === 'en' ? 'Source / Output' : 'Cổng nguồn / Phát'}
+            </div>
             {leftNodes.map((node) => {
               const isSelected = selectedLeft === node.id;
               const isLinked = connections.some((c) => c.fromId === node.id);
@@ -259,10 +295,10 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
                       : 'bg-white border-sky-200 hover:border-sky-400'
                   }`}
                 >
-                  <div className="min-w-0">
-                    <div className="text-xs font-extrabold text-sky-950 truncate">{node.label}</div>
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="text-xs font-extrabold text-sky-950 leading-snug break-words">{node.label}</div>
                     {node.sublabel && (
-                      <div className="text-[11px] font-medium text-sky-700 truncate">
+                      <div className="text-[11px] font-medium text-sky-700 leading-snug break-words">
                         {node.sublabel}
                       </div>
                     )}
@@ -279,7 +315,9 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
 
           {/* Right Target Ports */}
           <div className="space-y-2.5">
-            <div className="text-[11px] font-extrabold text-sky-700 text-right">Cổng thiết bị / Thu</div>
+            <div className="text-[11px] font-extrabold text-sky-700 text-right">
+              {lang === 'en' ? 'Target / Input' : 'Cổng thiết bị / Thu'}
+            </div>
             {rightNodes.map((node) => {
               const linkedBy = connections.find((c) => c.toId === node.id);
 
@@ -311,10 +349,10 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
                     className="w-4 h-4 rounded-full border-2 border-white shadow shrink-0"
                     style={{ backgroundColor: node.color }}
                   />
-                  <div className="min-w-0 text-right">
-                    <div className="text-xs font-extrabold text-sky-950 truncate">{node.label}</div>
+                  <div className="min-w-0 flex-1 text-right space-y-0.5">
+                    <div className="text-xs font-extrabold text-sky-950 leading-snug break-words">{node.label}</div>
                     {node.sublabel && (
-                      <div className="text-[11px] font-medium text-sky-700 truncate">
+                      <div className="text-[11px] font-medium text-sky-700 leading-snug break-words">
                         {node.sublabel}
                       </div>
                     )}
@@ -358,7 +396,15 @@ export const CircuitWiringBoard: React.FC<CircuitWiringBoardProps> = ({
           }`}
         >
           <Power className="w-4 h-4" />
-          <span>{powerOn ? 'Nguồn đã bật ổn định ✓' : 'Bật nguồn kiểm tra mạch'}</span>
+          <span>
+            {powerOn
+              ? lang === 'en'
+                ? 'Power verified ✓'
+                : 'Nguồn đã bật ổn định ✓'
+              : lang === 'en'
+              ? 'Power On & Test Circuit'
+              : 'Bật nguồn kiểm tra mạch'}
+          </span>
         </button>
       </div>
     </div>

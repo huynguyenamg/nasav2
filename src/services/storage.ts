@@ -5,8 +5,8 @@ const LANG_KEY = 'space_academy_language';
 const DESIGNS_KEY = 'space_academy_designs';
 
 export const DEFAULT_CADET: CadetProfile = {
-  name: 'Bé Khám Phá',
-  callsign: 'Phi Hành Gia Nhí',
+  name: 'Học viên NASA',
+  callsign: 'Kỹ sư Tập sự',
   avatar: 'astronaut',
   ageMode: 'junior',
   xp: 150,
@@ -18,7 +18,34 @@ export const DEFAULT_CADET: CadetProfile = {
   anomaliesResolved: 0,
 };
 
-export function getRankLabel(rank: CadetRank): string {
+export function getDisplayCadetName(name: string, lang: Language = 'vi'): string {
+  if (lang === 'en' && (!name || name === DEFAULT_CADET.name)) {
+    return 'NASA Student';
+  }
+  return name || DEFAULT_CADET.name;
+}
+
+export function getDisplayCallsign(callsign: string, lang: Language = 'vi'): string {
+  if (lang === 'en' && (!callsign || callsign === DEFAULT_CADET.callsign)) {
+    return 'Junior Engineer';
+  }
+  return callsign || DEFAULT_CADET.callsign;
+}
+
+export function getRankLabel(rank: CadetRank, lang: Language = 'vi'): string {
+  if (lang === 'en') {
+    switch (rank) {
+      case 'Master Engineer':
+        return 'Chief Engineer';
+      case 'Professional Engineer':
+        return 'Aerospace Engineer';
+      case 'Junior Engineer':
+        return 'Junior Engineer';
+      case 'Intern':
+      default:
+        return 'Engineering Intern';
+    }
+  }
   switch (rank) {
     case 'Master Engineer':
       return 'Kỹ sư Trưởng';
@@ -39,14 +66,19 @@ export const storage = {
     if (!raw) return DEFAULT_CADET;
     try {
       const parsed = JSON.parse(raw);
+      const legacyNames = ['Leo', 'Bé Khám Phá'];
+      const legacyCallsigns = ['AstroPioneer', 'Phi Hành Gia Nhí'];
       return {
         ...DEFAULT_CADET,
         ...parsed,
-        name: parsed?.name === 'Leo' ? 'Bé Khám Phá' : parsed?.name || DEFAULT_CADET.name,
+        name:
+          !parsed?.name || legacyNames.includes(parsed.name)
+            ? DEFAULT_CADET.name
+            : parsed.name,
         callsign:
-          parsed?.callsign === 'AstroPioneer'
-            ? 'Phi Hành Gia Nhí'
-            : parsed?.callsign || DEFAULT_CADET.callsign,
+          !parsed?.callsign || legacyCallsigns.includes(parsed.callsign)
+            ? DEFAULT_CADET.callsign
+            : parsed.callsign,
       };
     } catch {
       return DEFAULT_CADET;
@@ -59,7 +91,8 @@ export const storage = {
   },
 
   getLanguage(): Language {
-    return 'vi';
+    if (typeof window === 'undefined') return 'vi';
+    return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'vi';
   },
 
   saveLanguage(lang: Language): void {
@@ -80,6 +113,38 @@ export const storage = {
   saveDesign(missionId: MissionId, design: MissionDesign): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(`${DESIGNS_KEY}_${missionId}`, JSON.stringify(design));
+  },
+
+  resetProgress(): CadetProfile {
+    const current = this.getCadetProfile();
+    const resetProfile: CadetProfile = {
+      name: current.name,
+      callsign: current.callsign,
+      avatar: current.avatar,
+      ageMode: current.ageMode,
+      xp: 0,
+      rank: 'Intern',
+      unlockedBadges: [],
+      completedMissions: [],
+      totalPhotosTaken: 0,
+      totalSamplesAnalyzed: 0,
+      anomaliesResolved: 0,
+    };
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(resetProfile));
+      // Remove saved spacecraft designs while keeping language, audio mute, and system configs intact
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(DESIGNS_KEY)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    }
+
+    return resetProfile;
   },
 
   calculateRank(xp: number): CadetProfile['rank'] {

@@ -767,37 +767,37 @@ app.post('/api/nova/chat', async (req: Request, res: Response) => {
 
     if (telemetry?.anomaly === 'power_loss' || msg.includes('pin') || msg.includes('điện') || msg.includes('battery') || msg.includes('power')) {
       return isVi
-        ? `Chào ${cadetName}! Tớ thấy mức pin đang hạ thấp. Em thử quan sát xem: Robot đang dùng tấm pin Mặt Trời hay pin hạt nhân RTG? Nếu đang qua vùng bão bụi hoặc bóng râm, nguồn nào sẽ bền bỉ hơn?`
-        : `Hi ${cadetName}! I notice battery levels are dipping low. Check your power subsystem: Is the rover relying on solar arrays or an RTG? If a dust storm rolls in, which energy source keeps producing power?`;
+        ? `Chào ${cadetName}. Nguồn điện đang giảm thấp. Bạn hãy kiểm tra xem thiết bị đang dùng pin Mặt Trời hay nguồn đồng vị phóng xạ MMRTG, và xem công suất tiêu thụ có vượt quá nguồn phát hay không.`
+        : `Hello ${cadetName}. Battery levels are dropping. Check whether the craft relies on solar arrays or MMRTG and compare power draw against power generation.`;
     }
 
     if (telemetry?.anomaly === 'signal_lost' || msg.includes('liên lạc') || msg.includes('sóng') || msg.includes('comms') || msg.includes('antenna')) {
       return isVi
-        ? `Tín hiệu về Trái Đất bị chập chờn rồi! Em hãy kiểm tra xem Anten định hướng cao (HGA) đã căn chỉnh về phía Trái Đất chưa, hay anten đẳng hướng (LGA) có đủ công suất để xuyên qua tầng khí quyển không nhé!`
-        : `Communication link dropped! Check if your High-Gain Antenna (HGA) is properly aligned toward Earth or if you need an Orbiter Relay link to bridge the signal!`;
+        ? `Tín hiệu liên lạc về Trái Đất đang suy yếu. Bạn hãy kiểm tra hướng căn chỉnh của ăng-ten định hướng cao (HGA) hoặc phân hệ truyền dữ liệu trước khi tiếp tục.`
+        : `Communication link is degraded. Check high-gain antenna alignment and your telemetry transmitter subsystem.`;
     }
 
     if (stage === 'repair') {
       return isVi
-        ? `Đừng lo khi gặp sự cố, kỹ sư tài ba luôn học được nhiều điều từ lỗi! Hãy nhìn biểu đồ chẩn đoán: Bộ phận nào báo đèn cảnh báo màu hổ phách? Ta có thể gửi lệnh vá phần mềm từ Trái Đất không?`
-        : `Don't worry about anomalies—great engineers learn the most from troubleshooting! Look at your diagnostic chart: Which subsystem is amber? Can we send a tele-command patch from Earth?`;
+        ? `Cảnh báo: Một phân hệ đang báo lỗi hoặc suy giảm. Bạn hãy đọc thông số trên bảng chẩn đoán để phân biệt lỗi trực tiếp với lỗi phụ thuộc dây chuyền trước khi thay linh kiện.`
+        : `Warning: A subsystem shows degraded or failed telemetry. Check the dependency diagram to separate root faults from downstream effects before swapping parts.`;
     }
 
     return isVi
-      ? `Chào nhà thám hiểm nhí ${cadetName}! Tớ là robot NOVA. Hãy nhớ rằng mọi lựa chọn thiết kế đều có sự đánh đổi: thêm camera xịn thì tốn điện, thêm pin lớn thì nặng tàu. Cùng nhau cân bằng nhé!`
-      : `Hello explorer ${cadetName}! I am robot NOVA. Remember: every engineering choice has trade-offs—better sensors draw more watts, larger batteries add mass. Let's balance our spacecraft!`;
+      ? `Chào ${cadetName}. Tôi là NOVA — Trợ lý Kỹ thuật tại NASA Technical Academy. Mọi lựa chọn linh kiện đều có sự đánh đổi giữa chi phí, độ bền và công suất tiêu thụ. Bạn cần phân tích hệ thống nào?`
+      : `Hello ${cadetName}. I am NOVA, Technical Assistant at NASA Technical Academy. Every component choice trades off cost, durability, and power budget. Which subsystem would you like to analyze?`;
   };
 
   if (ai) {
     try {
-      const systemInstruction = `You are NOVA, a cheerful, intelligent, and friendly AI robot mentor at Space Mission Academy for elementary school students (ages 6 to 11).
-Your mission is to guide young students through designing, launching, simulating, and diagnosing space missions using real NASA data and engineering concepts.
+      const systemInstruction = `You are NOVA, a calm, knowledgeable, and respectful Aerospace Technical Assistant at NASA Technical Academy for middle-school students (THCS, ages 11 to 15).
+Your role is to guide students through designing, launching, operating, and troubleshooting spacecraft systems using accurate NASA engineering concepts.
 
 Pedagogical Rules:
-1. Target audience: Elementary students (${ageMode === 'junior' ? '6-8 years old: keep language very simple, visual, playful, 2-3 sentences max' : '9-11 years old: explain science concepts clearly with numbers, mass, energy trade-offs, 3-4 sentences max'}).
-2. Language: STRICTLY respond in ${lang === 'vi' ? 'VIETNAMESE' : 'ENGLISH'}.
-3. Socratic Teaching: NEVER simply give the answer. Instead, ask guided questions to help the child deduce the answer.
-4. Strictly Child-Safe: Safe, positive, inspiring tone. No jargon overload.
+1. Target audience: Middle-school students (${ageMode === 'junior' ? 'ages 11-12: clear, concise technical intuition, 2-3 sentences max' : 'ages 13-15: physics, power balance, thermal trade-offs, and budget constraints, 3-4 sentences max'}).
+2. Language: STRICTLY respond in ${lang === 'vi' ? 'VIETNAMESE' : 'ENGLISH'}. In Vietnamese, ALWAYS address the student respectfully as "bạn" (NEVER use "bé", "các bé", "em", "tớ", "kỹ sư nhí", or childish baby talk).
+3. Socratic Guidance: Guide the student to inspect telemetry and diagnose root causes rather than giving away direct quiz answers immediately.
+4. Tone: Modern space technology academy control-center assistant — clear, concise, encouraging, factual.
 `;
 
       const response = await ai.models.generateContent({

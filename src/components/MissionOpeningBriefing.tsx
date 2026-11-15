@@ -3,7 +3,7 @@ import { KnowledgeAccuracyTag, Language, MissionId } from '../types/game';
 import { getEquipmentProfileByMission } from '../data/nasaKnowledge';
 import { sound } from '../services/sound';
 import { PreschoolStoryExplorer } from './NasaVisualBlocks';
-import { BookOpen, ChevronDown, ChevronUp, Database } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Cpu, Database } from 'lucide-react';
 
 interface MissionOpeningBriefingProps {
   missionId: MissionId;
@@ -24,9 +24,9 @@ export const AccuracyTagBadge: React.FC<{ tag: KnowledgeAccuracyTag; lang: Langu
             ? 'Thông tin thực tế từ nguồn chính thức NASA / JPL / USGS / CSA'
             : 'Verified facts from NASA / JPL / USGS / CSA'
         }
-        className="text-xs font-bold text-emerald-700"
+        className="text-xs font-semibold text-emerald-700"
       >
-        {lang === 'vi' ? 'Thông tin thật NASA' : 'FACT'}
+        {lang === 'vi' ? 'Thông tin thật NASA' : 'Verified NASA Fact'}
       </span>
     );
   }
@@ -35,12 +35,12 @@ export const AccuracyTagBadge: React.FC<{ tag: KnowledgeAccuracyTag; lang: Langu
       <span
         title={
           lang === 'vi'
-            ? 'Diễn giải đơn giản, dễ hiểu cho bé dựa trên kiến thức NASA'
-            : 'Child-friendly explanation grounded in real NASA science'
+            ? 'Diễn giải kỹ thuật chuẩn xác cho học sinh THCS dựa trên tài liệu NASA'
+            : 'Clear engineering summary grounded in NASA science'
         }
-        className="text-xs font-bold text-sky-700"
+        className="text-xs font-semibold text-sky-700"
       >
-        {lang === 'vi' ? 'Kiến thức cho bé' : 'SIMPLIFIED FOR LEARNING'}
+        {lang === 'vi' ? 'Tóm tắt kỹ thuật' : 'Technical Summary'}
       </span>
     );
   }
@@ -48,12 +48,12 @@ export const AccuracyTagBadge: React.FC<{ tag: KnowledgeAccuracyTag; lang: Langu
     <span
       title={
         lang === 'vi'
-          ? 'Tình huống mô phỏng phục vụ trò chơi'
-          : 'Simulated scenario created for gameplay learning'
+          ? 'Tình huống mô phỏng kỹ thuật phục vụ thực hành'
+          : 'Simulated engineering scenario for training'
       }
-      className="text-xs font-bold text-amber-700"
+      className="text-xs font-semibold text-amber-700"
     >
-      {lang === 'vi' ? 'Mô phỏng trò chơi' : 'GAME SIMULATION'}
+      {lang === 'vi' ? 'Mô phỏng kỹ thuật' : 'Engineering Simulation'}
     </span>
   );
 };
@@ -66,24 +66,23 @@ export const MissionOpeningBriefing: React.FC<MissionOpeningBriefingProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const profile = getEquipmentProfileByMission(missionId);
-  const kid = profile.preschool;
+  const info = profile.preschool;
 
   return (
-    <div className="rounded-3xl bg-white border-2 border-sky-200 shadow-sm overflow-hidden">
-      {/* Cheerful Kid-Friendly Header */}
-      <div className="p-4 sm:p-5 bg-gradient-to-r from-sky-100 via-sky-50 to-amber-50/60 border-b border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-white border-2 border-sky-200 text-2xl flex items-center justify-center shrink-0 shadow-sm">
-            {kid.badgeEmoji}
+    <div className="rounded-xl bg-white border border-slate-200 shadow-xs overflow-hidden">
+      <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 shrink-0">
+            <Cpu className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs font-extrabold text-sky-600">
-              {lang === 'vi'
-                ? `Làm quen thiết bị màn ${profile.missionNumber}`
-                : `Meet the Mission ${profile.missionNumber} Explorer`}
+            <div className="text-xs font-semibold text-sky-700">
+              {lang === 'en'
+                ? `Equipment Overview · Mission ${profile.missionNumber}`
+                : `Tổng quan thiết bị · Nhiệm vụ ${profile.missionNumber}`}
             </div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-sky-950 font-display leading-snug">
-              {kid.simpleName[lang]}
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+              {info.simpleName[lang]}
             </h2>
           </div>
         </div>
@@ -97,10 +96,10 @@ export const MissionOpeningBriefing: React.FC<MissionOpeningBriefingProps> = ({
                 sound.stopSpeech();
                 onOpenNasaArchive(missionId);
               }}
-              className="min-h-11 px-4 py-2 rounded-2xl bg-sky-500 hover:bg-sky-600 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer shadow-sm whitespace-nowrap"
+              className="min-h-10 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition-colors cursor-pointer"
             >
-              <Database className="w-4 h-4" />
-              <span>{lang === 'vi' ? 'Xem dữ liệu NASA' : 'View NASA Data'}</span>
+              <Database className="w-4 h-4 shrink-0" />
+              <span>{lang === 'en' ? 'NASA Data' : 'Dữ liệu NASA'}</span>
             </button>
           )}
           <button
@@ -110,26 +109,17 @@ export const MissionOpeningBriefing: React.FC<MissionOpeningBriefingProps> = ({
               if (expanded) sound.stopSpeech();
               setExpanded((prev) => !prev);
             }}
-            className="min-h-11 px-4 py-2 rounded-2xl bg-white hover:bg-sky-50 text-sky-900 border-2 border-sky-200 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+            className="min-h-10 px-4 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <BookOpen className="w-4 h-4 text-sky-600" />
-            <span>
-              {expanded
-                ? lang === 'vi'
-                  ? 'Thu gọn'
-                  : 'Hide'
-                : lang === 'vi'
-                ? 'Khám phá'
-                : 'Explore'}
-            </span>
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <BookOpen className="w-4 h-4 text-sky-600 shrink-0" />
+            <span>{expanded ? (lang === 'en' ? 'Collapse' : 'Thu gọn') : lang === 'en' ? 'Expand' : 'Mở rộng'}</span>
+            {expanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
           </button>
         </div>
       </div>
 
-      {/* Single-Focus 4-Step Preschool Explorer */}
       {expanded && (
-        <div className="p-3 sm:p-5 bg-sky-50/50">
+        <div className="p-3 sm:p-5 bg-slate-50/50">
           <PreschoolStoryExplorer profile={profile} lang={lang} />
         </div>
       )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AdminUser, Dataset, MissionDataMapping, SimulationParameters } from '../../types/admin';
+import { AdminUser, Dataset, MissionDataMapping } from '../../types/admin';
+import { Language } from '../../types/game';
 import { adminService } from '../../services/adminService';
 import { sound } from '../../services/sound';
 import { MISSIONS } from '../../data/missions';
@@ -8,7 +9,6 @@ import {
   Database,
   Upload,
   Globe,
-  Link,
   Shield,
   CheckCircle2,
   AlertTriangle,
@@ -17,19 +17,19 @@ import {
   LogOut,
   ArrowLeft,
   Search,
-  ExternalLink,
   Check,
   Eye,
   Sliders,
-  Sparkles,
 } from 'lucide-react';
 
 interface AdminPortalProps {
+  lang?: Language;
   onExit: () => void;
   onDataSynced?: () => void;
 }
 
-export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }) => {
+export const AdminPortal: React.FC<AdminPortalProps> = ({ lang = 'vi', onExit, onDataSynced }) => {
+  const isEn = lang === 'en';
   const [user, setUser] = useState<AdminUser | null>(adminService.getCurrentUser());
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
@@ -138,9 +138,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               Object.keys(rows[0]).map((k) => ({ key: k, type: typeof rows[0][k] }))
             );
           }
-          showNotification('success', `Đã phân tích ${rows.length} bản ghi JSON.`);
+          showNotification(
+            'success',
+            isEn ? `Parsed ${rows.length} JSON record(s).` : `Đã phân tích ${rows.length} bản ghi JSON.`
+          );
         } catch {
-          showNotification('error', 'Tệp JSON không hợp lệ.');
+          showNotification('error', isEn ? 'Invalid JSON file.' : 'Tệp JSON không hợp lệ.');
         }
       };
       reader.readAsText(file);
@@ -158,10 +161,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               Object.keys(rows[0]).map((k) => ({ key: k, type: typeof rows[0][k] }))
             );
           }
-          showNotification('success', `Đã phân tích ${rows.length} dòng CSV từ ${file.name}.`);
+          showNotification(
+            'success',
+            isEn ? `Parsed ${rows.length} CSV row(s) from ${file.name}.` : `Đã phân tích ${rows.length} dòng CSV từ ${file.name}.`
+          );
         },
         error: () => {
-          showNotification('error', 'Lỗi khi đọc tệp CSV.');
+          showNotification('error', isEn ? 'Error reading CSV file.' : 'Lỗi khi đọc tệp CSV.');
         },
       });
     }
@@ -187,14 +193,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
         setMappedSlip(2.1);
         setMappedBoulders(0.62);
         setMappedSolar(510);
-        showNotification('success', 'Đã tải mẫu dữ liệu địa hình Sao Hỏa thực tế.');
+        showNotification(
+          'success',
+          isEn ? 'Loaded sample Mars terrain dataset.' : 'Đã tải mẫu dữ liệu địa hình Sao Hỏa thực tế.'
+        );
       },
     });
   };
 
   const handleSaveUploadedDataset = async (activateImmediately: boolean) => {
     if (!uploadTitle.trim()) {
-      showNotification('error', 'Vui lòng nhập tên bộ dữ liệu.');
+      showNotification('error', isEn ? 'Please enter a dataset title.' : 'Vui lòng nhập tên bộ dữ liệu.');
       return;
     }
 
@@ -228,9 +237,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
 
       if (activateImmediately) {
         await adminService.activateDataset(created.id);
-        showNotification('success', `Đã lưu và KÍCH HOẠT bộ dữ liệu "${created.title}" cho nhiệm vụ!`);
+        showNotification(
+          'success',
+          isEn
+            ? `Saved and ACTIVATED dataset "${created.title}" for the mission!`
+            : `Đã lưu và KÍCH HOẠT bộ dữ liệu "${created.title}" cho nhiệm vụ!`
+        );
       } else {
-        showNotification('success', `Đã lưu bộ dữ liệu "${created.title}" ở trạng thái BẢN NHÁP (Draft).`);
+        showNotification(
+          'success',
+          isEn
+            ? `Saved dataset "${created.title}" as DRAFT.`
+            : `Đã lưu bộ dữ liệu "${created.title}" ở trạng thái BẢN NHÁP (Draft).`
+        );
       }
 
       sound.playSuccess();
@@ -239,7 +258,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
       onDataSynced?.();
     } catch (err) {
       sound.playAlert();
-      showNotification('error', `Lỗi khi lưu bộ dữ liệu: ${String(err)}`);
+      showNotification(
+        'error',
+        isEn ? `Error saving dataset: ${String(err)}` : `Lỗi khi lưu bộ dữ liệu: ${String(err)}`
+      );
     }
   };
 
@@ -247,11 +269,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
     sound.playSuccess();
     try {
       await adminService.activateDataset(id);
-      showNotification('success', 'Đã kích hoạt bộ dữ liệu thành công. Game đã được đồng bộ phiên bản mới.');
+      showNotification(
+        'success',
+        isEn
+          ? 'Dataset activated. Game parameters synced to the new version.'
+          : 'Đã kích hoạt bộ dữ liệu thành công. Game đã được đồng bộ phiên bản mới.'
+      );
       loadLibraryAndMappings();
       onDataSynced?.();
     } catch (err) {
-      showNotification('error', `Lỗi kích hoạt: ${String(err)}`);
+      showNotification(
+        'error',
+        isEn ? `Activation failed: ${String(err)}` : `Lỗi kích hoạt: ${String(err)}`
+      );
     }
   };
 
@@ -260,11 +290,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
     try {
       const updated = await adminService.rollbackDataset(datasetId, targetVersion);
       setSelectedDataset(updated);
-      showNotification('success', `Đã khôi phục thông số về phiên bản ${targetVersion}.`);
+      showNotification(
+        'success',
+        isEn ? `Rolled back parameters to version ${targetVersion}.` : `Đã khôi phục thông số về phiên bản ${targetVersion}.`
+      );
       loadLibraryAndMappings();
       onDataSynced?.();
     } catch (err) {
-      showNotification('error', `Lỗi khôi phục: ${String(err)}`);
+      showNotification(
+        'error',
+        isEn ? `Rollback failed: ${String(err)}` : `Lỗi khôi phục: ${String(err)}`
+      );
     }
   };
 
@@ -272,11 +308,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
     sound.playClick();
     try {
       await adminService.updateMapping(missionId as any, datasetId);
-      showNotification('success', 'Đã gán bộ dữ liệu vào nhiệm vụ. Game engine sẽ sử dụng thông số mới.');
+      showNotification(
+        'success',
+        isEn
+          ? 'Assigned dataset to mission. The simulation engine will use the updated parameters.'
+          : 'Đã gán bộ dữ liệu vào nhiệm vụ. Game engine sẽ sử dụng thông số mới.'
+      );
       loadLibraryAndMappings();
       onDataSynced?.();
     } catch (err) {
-      showNotification('error', `Lỗi gán dữ liệu: ${String(err)}`);
+      showNotification(
+        'error',
+        isEn ? `Mapping error: ${String(err)}` : `Lỗi gán dữ liệu: ${String(err)}`
+      );
     }
   };
 
@@ -286,13 +330,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
     try {
       const fetched = await adminService.fetchNasaApi(connectorEndpoint, 'mission_01_mars_rover', connectorTitle);
       sound.playSuccess();
-      showNotification('success', `Đã kết nối thành công và tải "${fetched.title}" vào Thư viện dữ liệu!`);
+      showNotification(
+        'success',
+        isEn
+          ? `Connected and imported "${fetched.title}" into the Data Library!`
+          : `Đã kết nối thành công và tải "${fetched.title}" vào Thư viện dữ liệu!`
+      );
       loadLibraryAndMappings();
       setActiveTab('library');
       onDataSynced?.();
     } catch (err) {
       sound.playAlert();
-      showNotification('error', `Lỗi kết nối NASA API: ${String(err)}`);
+      showNotification(
+        'error',
+        isEn ? `NASA API connection error: ${String(err)}` : `Lỗi kết nối NASA API: ${String(err)}`
+      );
     } finally {
       setConnecting(false);
     }
@@ -309,13 +361,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
             </div>
             <h1 className="text-2xl font-bold text-white font-display">NASA Data Center Admin</h1>
             <p className="text-xs text-slate-400">
-              Khu vực quản trị dữ liệu độc quyền dành cho ban kỹ sư và quản trị viên.
+              {isEn
+                ? 'Restricted data management portal for mission engineers and administrators.'
+                : 'Khu vực quản trị dữ liệu độc quyền dành cho ban kỹ sư và quản trị viên.'}
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Tên đăng nhập / Username</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                {isEn ? 'Username' : 'Tên đăng nhập'}
+              </label>
               <input
                 type="text"
                 value={username}
@@ -326,7 +382,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Mật khẩu / Password</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                {isEn ? 'Password' : 'Mật khẩu'}
+              </label>
               <input
                 type="password"
                 value={password}
@@ -350,13 +408,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               className="w-full py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-950/50 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               {loadingLogin ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-              <span>Đăng Nhập Quản Trị</span>
+              <span>{isEn ? 'Sign In to Data Manager' : 'Đăng Nhập Quản Trị'}</span>
             </button>
           </form>
 
           {/* Quick Demo Credentials Tip */}
           <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-slate-400 text-[11px] space-y-1">
-            <span className="font-semibold text-slate-300 block">Tài khoản quản trị demo:</span>
+            <span className="font-semibold text-slate-300 block">
+              {isEn ? 'Demo admin credentials:' : 'Tài khoản quản trị demo:'}
+            </span>
             <div className="flex justify-between font-mono">
               <span>Super Admin: <strong className="text-cyan-300">admin</strong></span>
               <span>Pass: <strong className="text-cyan-300">nasa2026-admin</strong></span>
@@ -376,7 +436,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               className="text-xs text-slate-400 hover:text-white transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Quay lại trò chơi học sinh</span>
+              <span>{isEn ? 'Return to Academy' : 'Quay lại trò chơi học sinh'}</span>
             </button>
           </div>
         </div>
@@ -412,7 +472,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Đăng nhập bởi: <strong className="text-slate-200">{user.name}</strong>
+              {isEn ? 'Signed in as: ' : 'Đăng nhập bởi: '}
+              <strong className="text-slate-200">{user.name}</strong>
             </p>
           </div>
         </div>
@@ -423,12 +484,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               sound.playSuccess();
               loadLibraryAndMappings();
               onDataSynced?.();
-              showNotification('success', 'Đã đồng bộ dữ liệu NASA với Mission Engine.');
+              showNotification(
+                'success',
+                isEn ? 'Synced NASA datasets with Mission Engine.' : 'Đã đồng bộ dữ liệu NASA với Mission Engine.'
+              );
             }}
             className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingData ? 'animate-spin' : ''}`} />
-            <span>Sync NASA Data</span>
+            <span>{isEn ? 'Sync NASA Data' : 'Đồng bộ dữ liệu'}</span>
           </button>
 
           <button
@@ -439,12 +503,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
             className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Vào Game Học Sinh</span>
+            <span>{isEn ? 'Back to Academy' : 'Vào Game Học Sinh'}</span>
           </button>
 
           <button
             onClick={handleLogout}
-            title="Đăng xuất"
+            title={isEn ? 'Sign Out' : 'Đăng xuất'}
             className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
@@ -484,7 +548,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
           }`}
         >
           <Sliders className="w-4 h-4" />
-          <span>4. Mission Data Mapping (Gán dữ liệu)</span>
+          <span>{isEn ? '4. Mission Data Mapping' : '4. Gán dữ liệu nhiệm vụ'}</span>
         </button>
 
         <button
@@ -499,7 +563,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
           }`}
         >
           <Database className="w-4 h-4" />
-          <span>3. Data Library ({datasets.length} bộ)</span>
+          <span>{isEn ? `3. Data Library (${datasets.length})` : `3. Thư viện dữ liệu (${datasets.length} bộ)`}</span>
         </button>
 
         <button
@@ -514,7 +578,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
           }`}
         >
           <Upload className="w-4 h-4" />
-          <span>2. Upload Dataset (Tải tệp lên)</span>
+          <span>{isEn ? '2. Upload Dataset' : '2. Tải tệp lên'}</span>
         </button>
 
         <button
@@ -529,7 +593,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
           }`}
         >
           <Globe className="w-4 h-4" />
-          <span>1. NASA API Connector (Kết nối trực tiếp)</span>
+          <span>{isEn ? '1. NASA API Connector' : '1. Kết nối NASA API'}</span>
         </button>
       </div>
 
@@ -540,7 +604,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
             <div>
               <h2 className="text-lg font-bold text-white font-display">NASA API Live Connector</h2>
               <p className="text-xs text-slate-400">
-                Truy xuất trực tiếp các API mở của NASA (api.nasa.gov) và chuyển đổi thành bộ dữ liệu cho game.
+                {isEn
+                  ? 'Fetch public NASA Open APIs (api.nasa.gov) and convert them into mission simulation datasets.'
+                  : 'Truy xuất trực tiếp các API mở của NASA (api.nasa.gov) và chuyển đổi thành bộ dữ liệu cho game.'}
               </p>
             </div>
             <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded font-mono">
@@ -551,20 +617,28 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Nguồn API Endpoint</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {isEn ? 'API Endpoint Source' : 'Nguồn API Endpoint'}
+                </label>
                 <select
                   value={connectorEndpoint}
                   onChange={(e) => setConnectorEndpoint(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white"
                 >
-                  <option value="mars_weather">Mars InSight Weather Telemetry API (áp suất, gió, độ đục bụi)</option>
+                  <option value="mars_weather">
+                    {isEn
+                      ? 'Mars InSight Weather Telemetry API (pressure, wind, dust opacity)'
+                      : 'Mars InSight Weather Telemetry API (áp suất, gió, độ đục bụi)'}
+                  </option>
                   <option value="mars_photos">Mars 2020 Perseverance Photo Telemetry (Navcam/Mastcam)</option>
                   <option value="epic_earth">NASA DSCOVR EPIC Satellite Earth Observations</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Tên bộ dữ liệu lưu trữ</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {isEn ? 'Dataset Name' : 'Tên bộ dữ liệu lưu trữ'}
+                </label>
                 <input
                   type="text"
                   value={connectorTitle}
@@ -574,13 +648,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-2">
-                <span className="font-semibold text-slate-200 block">Thông số tự động nhận diện từ NASA:</span>
+                <span className="font-semibold text-slate-200 block">
+                  {isEn ? 'Auto-detected NASA Telemetry:' : 'Thông số tự động nhận diện từ NASA:'}
+                </span>
                 <ul className="list-disc list-inside space-y-1 text-slate-400 text-[11px] font-mono">
-                  <li>Độ nghiêng địa hình (Slope Incline): 7.5°</li>
-                  <li>Hệ số ma sát cát lún (Sand Slip): 1.35x</li>
-                  <li>Mật độ đá cản trở (Boulder Density): 38%</li>
-                  <li>Bức xạ Mặt Trời (Solar Flux): 540 W/m²</li>
-                  <li>Độ đục khí quyển bụi (Dust Opacity Tau): 0.52</li>
+                  <li>{isEn ? 'Slope Incline: 7.5°' : 'Độ nghiêng địa hình (Slope Incline): 7.5°'}</li>
+                  <li>{isEn ? 'Sand Slip Factor: 1.35x' : 'Hệ số ma sát cát lún (Sand Slip): 1.35x'}</li>
+                  <li>{isEn ? 'Boulder Density: 38%' : 'Mật độ đá cản trở (Boulder Density): 38%'}</li>
+                  <li>{isEn ? 'Solar Flux: 540 W/m²' : 'Bức xạ Mặt Trời (Solar Flux): 540 W/m²'}</li>
+                  <li>{isEn ? 'Dust Opacity Tau: 0.52' : 'Độ đục khí quyển bụi (Dust Opacity Tau): 0.52'}</li>
                 </ul>
               </div>
 
@@ -590,14 +666,26 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                 className="w-full py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-950/50 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {connecting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-                <span>{connecting ? 'Đang kết nối NASA...' : 'Kết Nối & Nạp Vào Thư Viện'}</span>
+                <span>
+                  {connecting
+                    ? isEn
+                      ? 'Connecting to NASA...'
+                      : 'Đang kết nối NASA...'
+                    : isEn
+                    ? 'Connect & Import to Library'
+                    : 'Kết Nối & Nạp Vào Thư Viện'}
+                </span>
               </button>
             </div>
 
             <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
-              <span className="text-xs font-semibold text-slate-200 block">Kiểm tra kết nối NASA Open APIs</span>
+              <span className="text-xs font-semibold text-slate-200 block">
+                {isEn ? 'NASA Open API Connection Status' : 'Kiểm tra kết nối NASA Open APIs'}
+              </span>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Hệ thống backend sử dụng API Key bảo mật phía server (không bao giờ lộ trong frontend), có cơ chế cache và fallback mẫu kiểm định để trò chơi luôn chạy ổn định ngay cả khi NASA API bảo trì hoặc bị giới hạn băng thông.
+                {isEn
+                  ? 'The backend uses a server-side API key (never exposed to the client) with caching and verified fallback datasets so simulations remain reliable even during NASA API rate limits.'
+                  : 'Hệ thống backend sử dụng API Key bảo mật phía server (không bao giờ lộ trong frontend), có cơ chế cache và fallback mẫu kiểm định để trò chơi luôn chạy ổn định ngay cả khi NASA API bảo trì hoặc bị giới hạn băng thông.'}
               </p>
               <div className="pt-3 border-t border-slate-800 text-[11px] text-cyan-400 font-mono space-y-1">
                 <div>Endpoint: https://api.nasa.gov/insight_weather/</div>
@@ -614,16 +702,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
-              <h2 className="text-lg font-bold text-white font-display">Upload & Validate Dataset</h2>
+              <h2 className="text-lg font-bold text-white font-display">
+                {isEn ? 'Upload & Validate Dataset' : 'Tải lên & Kiểm định bộ dữ liệu'}
+              </h2>
               <p className="text-xs text-slate-400">
-                Tải lên tệp CSV, Excel hoặc JSON; hệ thống tự động kiểm tra lỗi, thiếu, trùng lặp và ánh xạ thông số mô phỏng.
+                {isEn
+                  ? 'Upload CSV or JSON files to validate rows and calibrate mission physics parameters.'
+                  : 'Tải lên tệp CSV, Excel hoặc JSON; hệ thống tự động kiểm tra lỗi, thiếu, trùng lặp và ánh xạ thông số mô phỏng.'}
               </p>
             </div>
             <button
               onClick={loadSampleMarsCsv}
               className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
             >
-              Nạp dữ liệu mẫu Sao Hỏa
+              {isEn ? 'Load Sample Mars CSV' : 'Nạp dữ liệu mẫu Sao Hỏa'}
             </button>
           </div>
 
@@ -631,7 +723,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
             {/* Left: Metadata & File Dropzone */}
             <div className="lg:col-span-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Tên bộ dữ liệu</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {isEn ? 'Dataset Name' : 'Tên bộ dữ liệu'}
+                </label>
                 <input
                   type="text"
                   value={uploadTitle}
@@ -642,7 +736,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Gán cho Nhiệm vụ</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isEn ? 'Assign to Mission' : 'Gán cho Nhiệm vụ'}
+                  </label>
                   <select
                     value={uploadMissionId}
                     onChange={(e) => setUploadMissionId(e.target.value)}
@@ -650,14 +746,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                   >
                     {MISSIONS.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.number}. {m.title.vi}
+                        {m.number}. {m.title[lang]}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Phân loại dữ liệu</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isEn ? 'Dataset Category' : 'Phân loại dữ liệu'}
+                  </label>
                   <select
                     value={uploadType}
                     onChange={(e) => setUploadType(e.target.value as any)}
@@ -672,7 +770,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Nguồn NASA</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isEn ? 'NASA Source' : 'Nguồn NASA'}
+                  </label>
                   <input
                     type="text"
                     value={uploadSource}
@@ -681,7 +781,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Phiên bản (Version)</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isEn ? 'Version' : 'Phiên bản (Version)'}
+                  </label>
                   <input
                     type="text"
                     value={uploadVersion}
@@ -694,8 +796,14 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               {/* Dropzone */}
               <div className="border-2 border-dashed border-slate-700 rounded-2xl p-6 text-center hover:border-cyan-500 transition-colors bg-slate-950/60">
                 <Upload className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-                <span className="text-xs font-bold text-white block">Chọn tệp CSV hoặc JSON từ máy tính</span>
-                <span className="text-[11px] text-slate-400 block mt-1">Hỗ trợ các cột số đo tọa độ, độ cao, độ dốc, bức xạ</span>
+                <span className="text-xs font-bold text-white block">
+                  {isEn ? 'Select a CSV or JSON file from your device' : 'Chọn tệp CSV hoặc JSON từ máy tính'}
+                </span>
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  {isEn
+                    ? 'Supports coordinate, elevation, terrain slope, and solar flux columns'
+                    : 'Hỗ trợ các cột số đo tọa độ, độ cao, độ dốc, bức xạ'}
+                </span>
                 <input
                   type="file"
                   accept=".csv,.json,.txt"
@@ -710,20 +818,24 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">
-                    Ánh Xạ Thông Số Vào Mission Engine
+                    {isEn ? 'Mission Engine Parameter Calibration' : 'Ánh Xạ Thông Số Vào Mission Engine'}
                   </span>
                   <span className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 px-2 py-0.5 rounded font-mono">
                     Dynamic Rules
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Các thông số này sẽ trực tiếp thay đổi vật lý lái robot, sức cản đụn cát và lượng pin tiêu thụ trên bề mặt Sao Hỏa.
+                  {isEn
+                    ? 'These parameters directly adjust rover driving physics, dune slip resistance, and Mars surface power draw.'
+                    : 'Các thông số này sẽ trực tiếp thay đổi vật lý lái robot, sức cản đụn cát và lượng pin tiêu thụ trên bề mặt Sao Hỏa.'}
                 </p>
 
                 <div className="space-y-3 pt-2">
                   <div>
                     <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="text-slate-300">Độ dốc địa hình (Slope Incline):</span>
+                      <span className="text-slate-300">
+                        {isEn ? 'Terrain Slope Incline:' : 'Độ dốc địa hình (Slope Incline):'}
+                      </span>
                       <strong className="text-cyan-400">{mappedSlope}°</strong>
                     </div>
                     <input
@@ -736,13 +848,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                       className="w-full accent-cyan-400 cursor-pointer"
                     />
                     <span className="text-[10px] text-slate-500 block">
-                      {mappedSlope > 14 ? 'Rất dốc: Robot tiêu thụ gấp đôi pin khi leo dốc' : 'Độ dốc trung bình'}
+                      {mappedSlope > 14
+                        ? isEn
+                          ? 'Very steep: Rover consumes double battery power when climbing'
+                          : 'Rất dốc: Robot tiêu thụ gấp đôi pin khi leo dốc'
+                        : isEn
+                        ? 'Moderate terrain incline'
+                        : 'Độ dốc trung bình'}
                     </span>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="text-slate-300">Hệ số cát lún (Sand Slip Multiplier):</span>
+                      <span className="text-slate-300">
+                        {isEn ? 'Sand Slip Multiplier:' : 'Hệ số cát lún (Sand Slip Multiplier):'}
+                      </span>
                       <strong className="text-amber-400">{mappedSlip}x</strong>
                     </div>
                     <input
@@ -755,13 +875,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                       className="w-full accent-amber-400 cursor-pointer"
                     />
                     <span className="text-[10px] text-slate-500 block">
-                      {mappedSlip > 2.0 ? 'Cát mịn lún sâu: Bánh xe thường sẽ trượt 70%, cần bánh Rocker-Bogie' : 'Cát cứng vững chắc'}
+                      {mappedSlip > 2.0
+                        ? isEn
+                          ? 'Deep soft regolith: Standard wheels slip 70%; Rocker-Bogie traction required'
+                          : 'Cát mịn lún sâu: Bánh xe thường sẽ trượt 70%, cần bánh Rocker-Bogie'
+                        : isEn
+                        ? 'Firm compacted regolith'
+                        : 'Cát cứng vững chắc'}
                     </span>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="text-slate-300">Mật độ đá tảng cản trở (Boulder Density):</span>
+                      <span className="text-slate-300">
+                        {isEn ? 'Boulder Density:' : 'Mật độ đá tảng cản trở (Boulder Density):'}
+                      </span>
                       <strong className="text-purple-400">{Math.round(mappedBoulders * 100)}%</strong>
                     </div>
                     <input
@@ -777,7 +905,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
 
                   <div>
                     <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="text-slate-300">Bức xạ quang năng Mặt Trời (Solar Flux):</span>
+                      <span className="text-slate-300">
+                        {isEn ? 'Solar Flux:' : 'Bức xạ quang năng Mặt Trời (Solar Flux):'}
+                      </span>
                       <strong className="text-yellow-400">{mappedSolar} W/m²</strong>
                     </div>
                     <input
@@ -797,11 +927,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               {parsedRows.length > 0 && (
                 <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-2 font-mono">
                   <div className="flex justify-between text-slate-300">
-                    <span>Số dòng đọc được: <strong className="text-cyan-300">{parsedRows.length}</strong></span>
-                    <span>Điểm chất lượng: <strong className="text-emerald-400">98% Nominal</strong></span>
+                    <span>
+                      {isEn ? 'Parsed rows: ' : 'Số dòng đọc được: '}
+                      <strong className="text-cyan-300">{parsedRows.length}</strong>
+                    </span>
+                    <span>
+                      {isEn ? 'Quality score: ' : 'Điểm chất lượng: '}
+                      <strong className="text-emerald-400">98% Nominal</strong>
+                    </span>
                   </div>
                   <div className="text-[10px] text-slate-500 overflow-x-auto">
-                    Cột: {detectedColumns.map((c) => c.key).join(', ')}
+                    {isEn ? 'Columns: ' : 'Cột: '}
+                    {detectedColumns.map((c) => c.key).join(', ')}
                   </div>
                 </div>
               )}
@@ -813,7 +950,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                   onClick={() => handleSaveUploadedDataset(false)}
                   className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors cursor-pointer"
                 >
-                  Lưu Bản Nháp (Save Draft)
+                  {isEn ? 'Save Draft' : 'Lưu Bản Nháp (Save Draft)'}
                 </button>
                 <button
                   type="button"
@@ -821,7 +958,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                   className="flex-1 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-cyan-950/50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Xác Nhận & Kích Hoạt Ngay</span>
+                  <span>{isEn ? 'Save & Activate Now' : 'Xác Nhận & Kích Hoạt Ngay'}</span>
                 </button>
               </div>
             </div>
@@ -836,7 +973,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
             <div>
               <h2 className="text-lg font-bold text-white font-display">NASA Data Library</h2>
               <p className="text-xs text-slate-400">
-                Quản lý các bộ dữ liệu, kiểm tra điểm chất lượng, duyệt lịch sử phiên bản và khôi phục (Rollback).
+                {isEn
+                  ? 'Manage datasets, inspect quality scores, browse version history, and perform rollbacks.'
+                  : 'Quản lý các bộ dữ liệu, kiểm tra điểm chất lượng, duyệt lịch sử phiên bản và khôi phục (Rollback).'}
               </p>
             </div>
 
@@ -844,7 +983,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Tìm kiếm bộ dữ liệu..."
+                placeholder={isEn ? 'Search datasets...' : 'Tìm kiếm bộ dữ liệu...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
@@ -885,7 +1024,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                           {ds.type}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 line-clamp-1">{ds.description || ds.source}</p>
+                      <p className="text-xs text-slate-400 leading-relaxed">{ds.description || ds.source}</p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
@@ -897,7 +1036,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                         className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 flex items-center gap-1.5 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Xem & Khôi Phục</span>
+                        <span>{isEn ? 'Inspect & Rollback' : 'Xem & Khôi Phục'}</span>
                       </button>
 
                       {!isActive && (
@@ -905,7 +1044,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                           onClick={() => handleActivateDataset(ds.id)}
                           className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold cursor-pointer transition-colors shadow"
                         >
-                          Kích Hoạt
+                          {isEn ? 'Activate' : 'Kích Hoạt'}
                         </button>
                       )}
                     </div>
@@ -913,11 +1052,26 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
 
                   {/* Parameter Tags */}
                   <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-slate-400">
-                    <span>Độ dốc: <strong className="text-cyan-300">{ds.simulationParameters.terrainSlopeDeg ?? '--'}°</strong></span>
-                    <span>Ma sát cát: <strong className="text-amber-300">{ds.simulationParameters.sandSlipFactor ?? '--'}x</strong></span>
-                    <span>Bức xạ: <strong className="text-yellow-300">{ds.simulationParameters.solarFluxWm2 ?? '--'} W/m²</strong></span>
-                    <span>Điểm chất lượng: <strong className="text-emerald-400">{ds.qualityScore}%</strong></span>
-                    <span>Bản ghi: <strong className="text-slate-300">{ds.recordCount}</strong></span>
+                    <span>
+                      {isEn ? 'Slope:' : 'Độ dốc:'}{' '}
+                      <strong className="text-cyan-300">{ds.simulationParameters.terrainSlopeDeg ?? '--'}°</strong>
+                    </span>
+                    <span>
+                      {isEn ? 'Sand slip:' : 'Ma sát cát:'}{' '}
+                      <strong className="text-amber-300">{ds.simulationParameters.sandSlipFactor ?? '--'}x</strong>
+                    </span>
+                    <span>
+                      {isEn ? 'Solar flux:' : 'Bức xạ:'}{' '}
+                      <strong className="text-yellow-300">{ds.simulationParameters.solarFluxWm2 ?? '--'} W/m²</strong>
+                    </span>
+                    <span>
+                      {isEn ? 'Quality:' : 'Điểm chất lượng:'}{' '}
+                      <strong className="text-emerald-400">{ds.qualityScore}%</strong>
+                    </span>
+                    <span>
+                      {isEn ? 'Records:' : 'Bản ghi:'}{' '}
+                      <strong className="text-slate-300">{ds.recordCount}</strong>
+                    </span>
                   </div>
                 </div>
               );
@@ -939,15 +1093,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                   LIVE GAME CONNECTED
                 </span>
               </div>
-              <h2 className="text-lg font-bold text-white font-display">Gán Bộ Dữ Liệu Vào 5 Nhiệm Vụ</h2>
+              <h2 className="text-lg font-bold text-white font-display">
+                {isEn ? 'Assign Datasets to 5 Missions' : 'Gán Bộ Dữ Liệu Vào 5 Nhiệm Vụ'}
+              </h2>
               <p className="text-xs text-slate-400">
-                Chọn bộ dữ liệu NASA đang kích hoạt cho từng nhiệm vụ. Thay đổi tại đây sẽ trực tiếp điều khiển các phép tính vật lý, ma sát bánh xe và mức hao pin trong game của học sinh!
+                {isEn
+                  ? 'Select the active NASA dataset per mission. Changes here immediately govern rover physics, traction, and energy consumption.'
+                  : 'Chọn bộ dữ liệu NASA đang kích hoạt cho từng nhiệm vụ. Thay đổi tại đây sẽ trực tiếp điều khiển các phép tính vật lý, ma sát bánh xe và mức hao pin trong game của học sinh!'}
               </p>
             </div>
 
             <div className="text-right text-xs text-slate-400 font-mono">
-              <div>Lần đồng bộ cuối:</div>
-              <div className="text-cyan-400">{new Date().toLocaleTimeString()}</div>
+              <div>{isEn ? 'Last synced:' : 'Lần đồng bộ cuối:'}</div>
+              <div className="text-cyan-400">{new Date().toLocaleTimeString(isEn ? 'en-US' : 'vi-VN')}</div>
             </div>
           </div>
 
@@ -968,13 +1126,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                         {m.number}
                       </div>
                       <div>
-                        <h3 className="font-bold text-white text-sm">{m.title.vi}</h3>
-                        <p className="text-xs text-slate-400">{m.targetLocation.vi}</p>
+                        <h3 className="font-bold text-white text-sm">{m.title[lang]}</h3>
+                        <p className="text-xs text-slate-400">{m.targetLocation[lang]}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">Bộ dữ liệu gán:</span>
+                      <span className="text-xs text-slate-400">{isEn ? 'Assigned dataset:' : 'Bộ dữ liệu gán:'}</span>
                       <select
                         value={currentMappedId || ''}
                         onChange={(e) => handleMapMission(m.id, e.target.value)}
@@ -993,26 +1151,39 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                   {mappedDataset && (
                     <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800/80 text-xs space-y-2">
                       <div className="flex items-center justify-between text-[11px] font-mono text-cyan-400">
-                        <span>Đang kích hoạt: <strong>{mappedDataset.title}</strong> (v{mappedDataset.version})</span>
-                        <span className="text-slate-400">Nguồn: {mappedDataset.source}</span>
+                        <span>
+                          {isEn ? 'Active: ' : 'Đang kích hoạt: '}
+                          <strong>{mappedDataset.title}</strong> (v{mappedDataset.version})
+                        </span>
+                        <span className="text-slate-400">
+                          {isEn ? 'Source:' : 'Nguồn:'} {mappedDataset.source}
+                        </span>
                       </div>
 
                       {m.id === 'mission_01_mars_rover' && (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono pt-1 text-slate-300">
                           <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                            <span className="text-slate-500 block text-[10px]">Độ dốc địa hình</span>
+                            <span className="text-slate-500 block text-[10px]">
+                              {isEn ? 'Terrain Slope' : 'Độ dốc địa hình'}
+                            </span>
                             <strong className="text-cyan-300">{mappedDataset.simulationParameters.terrainSlopeDeg}°</strong>
                           </div>
                           <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                            <span className="text-slate-500 block text-[10px]">Hệ số cát lún</span>
+                            <span className="text-slate-500 block text-[10px]">
+                              {isEn ? 'Sand Slip Factor' : 'Hệ số cát lún'}
+                            </span>
                             <strong className="text-amber-300">{mappedDataset.simulationParameters.sandSlipFactor}x</strong>
                           </div>
                           <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                            <span className="text-slate-500 block text-[10px]">Bức xạ quang năng</span>
+                            <span className="text-slate-500 block text-[10px]">
+                              {isEn ? 'Solar Flux' : 'Bức xạ quang năng'}
+                            </span>
                             <strong className="text-yellow-300">{mappedDataset.simulationParameters.solarFluxWm2} W/m²</strong>
                           </div>
                           <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                            <span className="text-slate-500 block text-[10px]">Tỷ lệ đá cản trở</span>
+                            <span className="text-slate-500 block text-[10px]">
+                              {isEn ? 'Boulder Density' : 'Tỷ lệ đá cản trở'}
+                            </span>
                             <strong className="text-purple-300">{Math.round((mappedDataset.simulationParameters.boulderDensity || 0.4) * 100)}%</strong>
                           </div>
                         </div>
@@ -1032,32 +1203,40 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
           <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-800">
               <div>
-                <span className="text-[10px] font-mono text-cyan-400 uppercase">Chi tiết bộ dữ liệu</span>
+                <span className="text-[10px] font-mono text-cyan-400 uppercase">
+                  {isEn ? 'Dataset Details' : 'Chi tiết bộ dữ liệu'}
+                </span>
                 <h3 className="text-lg font-bold text-white">{selectedDataset.title}</h3>
-                <p className="text-xs text-slate-400">Phiên bản hiện tại: v{selectedDataset.version} · {selectedDataset.type}</p>
+                <p className="text-xs text-slate-400">
+                  {isEn ? 'Current version:' : 'Phiên bản hiện tại:'} v{selectedDataset.version} · {selectedDataset.type}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedDataset(null)}
                 className="text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg bg-slate-800 cursor-pointer"
               >
-                Đóng
+                {isEn ? 'Close' : 'Đóng'}
               </button>
             </div>
 
             {/* Simulation Parameters Current Snapshot */}
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
-              <span className="font-bold text-white block">Thông số mô phỏng hiện tại:</span>
+              <span className="font-bold text-white block">
+                {isEn ? 'Current Simulation Parameters:' : 'Thông số mô phỏng hiện tại:'}
+              </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
-                <div>Độ dốc: <strong className="text-cyan-300">{selectedDataset.simulationParameters.terrainSlopeDeg}°</strong></div>
-                <div>Ma sát cát: <strong className="text-amber-300">{selectedDataset.simulationParameters.sandSlipFactor}x</strong></div>
-                <div>Bức xạ: <strong className="text-yellow-300">{selectedDataset.simulationParameters.solarFluxWm2} W/m²</strong></div>
-                <div>Đá tảng: <strong className="text-purple-300">{selectedDataset.simulationParameters.boulderDensity}</strong></div>
+                <div>{isEn ? 'Slope:' : 'Độ dốc:'} <strong className="text-cyan-300">{selectedDataset.simulationParameters.terrainSlopeDeg}°</strong></div>
+                <div>{isEn ? 'Sand slip:' : 'Ma sát cát:'} <strong className="text-amber-300">{selectedDataset.simulationParameters.sandSlipFactor}x</strong></div>
+                <div>{isEn ? 'Solar:' : 'Bức xạ:'} <strong className="text-yellow-300">{selectedDataset.simulationParameters.solarFluxWm2} W/m²</strong></div>
+                <div>{isEn ? 'Boulders:' : 'Đá tảng:'} <strong className="text-purple-300">{selectedDataset.simulationParameters.boulderDensity}</strong></div>
               </div>
             </div>
 
             {/* Version History & Rollback Table */}
             <div className="space-y-3">
-              <span className="text-xs font-bold text-white block">Lịch sử cập nhật phiên bản (Version History)</span>
+              <span className="text-xs font-bold text-white block">
+                {isEn ? 'Version History' : 'Lịch sử cập nhật phiên bản (Version History)'}
+              </span>
               {selectedDataset.versionHistory && selectedDataset.versionHistory.length > 0 ? (
                 <div className="space-y-2">
                   {selectedDataset.versionHistory.map((h, idx) => (
@@ -1068,8 +1247,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                       <div>
                         <div className="flex items-center gap-2">
                           <strong className="text-cyan-400 font-mono">v{h.version}</strong>
-                          <span className="text-slate-400 text-[11px]">{new Date(h.updatedAt).toLocaleDateString()}</span>
-                          <span className="text-[10px] text-slate-500">bởi {h.author}</span>
+                          <span className="text-slate-400 text-[11px]">
+                            {new Date(h.updatedAt).toLocaleDateString(isEn ? 'en-US' : 'vi-VN')}
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            {isEn ? `by ${h.author}` : `bởi ${h.author}`}
+                          </span>
                         </div>
                         <p className="text-[11px] text-slate-300 mt-0.5">{h.note}</p>
                       </div>
@@ -1080,14 +1263,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onExit, onDataSynced }
                           className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px] font-semibold border border-slate-700 flex items-center gap-1 cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
-                          <span>Khôi phục v{h.version}</span>
+                          <span>{isEn ? `Rollback v${h.version}` : `Khôi phục v${h.version}`}</span>
                         </button>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-500 italic">Chưa có bản lưu phiên bản trước đó.</p>
+                <p className="text-xs text-slate-500 italic">
+                  {isEn ? 'No previous version snapshots recorded.' : 'Chưa có bản lưu phiên bản trước đó.'}
+                </p>
               )}
             </div>
           </div>

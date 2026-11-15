@@ -1,6 +1,11 @@
 import React from 'react';
-import { EquipmentSubsystemId, MissionSessionState } from '../../types/game';
-import { getEffectiveSubsystemState, getSubsystemBlueprint } from '../../data/equipmentSystems';
+import { EquipmentSubsystemId, Language, MissionSessionState } from '../../types/game';
+import {
+  getEffectiveSubsystemState,
+  getFaultText,
+  getSubsystemBlueprint,
+  getSubsystemText,
+} from '../../data/equipmentSystems';
 import { AlertOctagon, AlertTriangle, Wrench } from 'lucide-react';
 import { sound } from '../../services/sound';
 
@@ -8,6 +13,7 @@ interface SubsystemLockNoticeProps {
   session: MissionSessionState;
   subsystemId: EquipmentSubsystemId;
   actionLabel: string;
+  lang: Language;
   onOpenRepair: (targetSubsystem?: EquipmentSubsystemId) => void;
 }
 
@@ -15,15 +21,19 @@ export const SubsystemLockNotice: React.FC<SubsystemLockNoticeProps> = ({
   session,
   subsystemId,
   actionLabel,
+  lang,
   onOpenRepair,
 }) => {
-  const effective = getEffectiveSubsystemState(session, subsystemId);
+  const effective = getEffectiveSubsystemState(session, subsystemId, lang);
   const bp = getSubsystemBlueprint(subsystemId);
   const rt = session.subsystems[subsystemId];
 
   if (effective.status === 'ok' || !bp) return null;
 
+  const isEn = lang === 'en';
   const isFailed = effective.status === 'failed';
+  const bpName = getSubsystemText(bp, lang).name;
+  const faultText = getFaultText(subsystemId, rt, lang);
 
   return (
     <div
@@ -40,13 +50,30 @@ export const SubsystemLockNotice: React.FC<SubsystemLockNoticeProps> = ({
         <div className="space-y-0.5">
           <div className={`text-sm font-extrabold ${isFailed ? 'text-rose-900' : 'text-amber-950'}`}>
             {isFailed
-              ? `Vô hiệu hóa "${actionLabel}" — Lỗi từ: ${effective.blockedBy || bp.name}`
-              : `Suy giảm "${actionLabel}" — ${effective.degradedBy ? `Ảnh hưởng từ ${effective.degradedBy}` : rt?.faultTitle || bp.name}`}
+              ? isEn
+                ? `"${actionLabel}" Locked — Fault in: ${effective.blockedBy || bpName}`
+                : `Vô hiệu hóa "${actionLabel}" — Lỗi từ: ${effective.blockedBy || bpName}`
+              : isEn
+              ? `"${actionLabel}" Degraded — ${
+                  effective.degradedBy
+                    ? `Affected by ${effective.degradedBy}`
+                    : faultText.faultTitle || bpName
+                }`
+              : `Suy giảm "${actionLabel}" — ${
+                  effective.degradedBy
+                    ? `Ảnh hưởng từ ${effective.degradedBy}`
+                    : faultText.faultTitle || bpName
+                }`}
           </div>
           <div className={`text-xs font-medium ${isFailed ? 'text-rose-800' : 'text-amber-900'}`}>
             {effective.blockedBy
-              ? `Bộ phận "${bp.name}" phụ thuộc vào "${effective.blockedBy}" đang bị hỏng. Các chức năng không liên quan vẫn hoạt động bình thường.`
-              : rt?.faultCause || 'Hãy kiểm tra và sửa chữa bộ phận gặp sự cố để khôi phục hiệu suất.'}
+              ? isEn
+                ? `Subsystem "${bpName}" depends on "${effective.blockedBy}", which is currently failed. Unrelated functions remain operational.`
+                : `Bộ phận "${bpName}" phụ thuộc vào "${effective.blockedBy}" đang bị hỏng. Các chức năng không liên quan vẫn hoạt động bình thường.`
+              : faultText.faultCause ||
+                (isEn
+                  ? 'Inspect and repair the affected subsystem to restore full performance.'
+                  : 'Hãy kiểm tra và sửa chữa bộ phận gặp sự cố để khôi phục hiệu suất.')}
           </div>
         </div>
       </div>
@@ -60,7 +87,7 @@ export const SubsystemLockNotice: React.FC<SubsystemLockNoticeProps> = ({
         className="min-h-10 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-xs"
       >
         <Wrench className="w-4 h-4" />
-        <span>Sửa ngay</span>
+        <span>{isEn ? 'Repair Now' : 'Sửa ngay'}</span>
       </button>
     </div>
   );

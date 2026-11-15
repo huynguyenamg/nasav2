@@ -1353,7 +1353,7 @@ export const MISSION_REPAIR_SCENARIOS: Record<MissionId, MissionRepairScenario> 
           {
             id: 'm5_bal_incompat',
             slotId: 'm5_balance',
-            name: { vi: 'Bánh Xe Đạp Trẻ Em', en: 'Kids Bicycle Wheel' },
+            name: { vi: 'Bánh Xe Cao Su Dân Dụng', en: 'Commercial Rubber Wheel' },
             shortNote: { vi: 'Không phải bánh đà động cơ chính xác!', en: 'Not a motorized precision flywheel!' },
             quality: 'incompatible',
             compatibilityOk: false,
@@ -1666,7 +1666,7 @@ export function evaluatePreDeploySafety(
       checks,
       summary:
         lang === 'vi'
-          ? 'Cảnh báo: Có linh kiện mức Trung bình. Bé vẫn có thể bấm Chạy thử nhưng có thể gặp lỗi!'
+          ? 'Cảnh báo: Có linh kiện mức Trung bình. Bạn vẫn có thể bấm Chạy thử nhưng có thể gặp lỗi!'
           : 'WARNING: Medium-quality part detected. You may Deploy, but instability could occur!',
     };
   }

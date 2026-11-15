@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   EquipmentSubsystemId,
+  Language,
   MissionSessionState,
 } from '../../types/game';
 import {
   getEffectiveSubsystemState,
   getPartById,
+  getPartText,
 } from '../../data/equipmentSystems';
 import { SubsystemLockNotice } from './SubsystemLockNotice';
+import { SubTaskStatusBar, SubTaskItem } from './SubTaskStatusBar';
 import { CircuitWiringBoard } from '../interactive/CircuitWiringBoard';
 import { sound } from '../../services/sound';
 import {
@@ -28,9 +31,15 @@ import {
 
 interface HubbleSimulatorProps {
   session: MissionSessionState;
+  lang: Language;
   onUpdateSession: (session: MissionSessionState) => void;
   onOpenRepair: (targetSubsystem?: EquipmentSubsystemId) => void;
-  onCompleteSubTask: (taskId: string, extras?: { photos?: number; samples?: number }) => void;
+  onCompleteSubTask: (
+    taskId: string,
+    extras?: { photos?: number; samples?: number },
+    sessionPatch?: Partial<MissionSessionState>
+  ) => void;
+  onFailSubTask?: (taskId: string, sessionPatch?: Partial<MissionSessionState>) => void;
 }
 
 type HubbleTaskKey = 'A_optics' | 'B_guidance' | 'C_power' | 'D_schedule';
@@ -39,47 +48,60 @@ type OpticalFilter = 'uv' | 'visible' | 'ir';
 interface SkyTargetItem {
   id: string;
   name: string;
+  nameEn: string;
   energy: number;
   scienceRank: number;
   note: string;
+  noteEn: string;
 }
 
 const INITIAL_SKY_TARGETS: SkyTargetItem[] = [
   {
     id: 'moon_test',
     name: 'Chụp thử Mặt Trăng (Quá sáng — Ít giá trị mới)',
+    nameEn: 'Test-capture the Moon (Too bright — Low science value)',
     energy: 15,
     scienceRank: 4,
     note: 'Ánh sáng phản chiếu quá mạnh có thể gây chói cảm biến WFC3.',
+    noteEn: 'Reflected glare is too strong and can saturate the WFC3 sensor.',
   },
   {
     id: 'galaxy',
     name: 'Thiên hà cổ cách 13 tỷ năm ánh sáng (Ưu tiên 3)',
+    nameEn: 'Ancient Galaxy 13B Light-Years Away (Priority #3)',
     energy: 35,
     scienceRank: 3,
     note: 'Cần thời gian phơi sáng dài sau khi hiệu chỉnh xong ngoại hành tinh.',
+    noteEn: 'Requires long exposure after completing the exoplanet window.',
   },
   {
     id: 'exoplanet',
     name: 'Khí quyển Ngoại hành tinh (Ưu tiên khoa học #1)',
+    nameEn: 'Exoplanet Atmosphere Transit (Science Priority #1)',
     energy: 30,
     scienceRank: 1,
     note: 'Cửa sổ quá cảnh khí quyển ngắn — phải quan sát đầu tiên!',
+    noteEn: 'Short atmospheric transit window — must observe first!',
   },
   {
     id: 'nebula',
     name: 'Tinh vân Đại Bàng hình thành sao (Ưu tiên #2)',
+    nameEn: 'Eagle Nebula Star-Forming Pillars (Priority #2)',
     energy: 25,
     scienceRank: 2,
     note: 'Dùng dải phổ Khả kiến/Hồng ngoại xuyên bụi khí.',
+    noteEn: 'Use Visible or Infrared band to peer through cosmic dust.',
   },
 ];
 
 export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
   session,
+  lang,
   onOpenRepair,
   onCompleteSubTask,
+  onFailSubTask,
 }) => {
+  const isEn = lang === 'en';
   const [activeTask, setActiveTask] = useState<HubbleTaskKey>('A_optics');
 
   // Task A: Optics Focus, Exposure, Filter, Before/After Compare, Zoom/Pan & Anomaly Mark
@@ -121,13 +143,20 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [scheduleFeedback, setScheduleFeedback] = useState<string | null>(null);
 
-  const opticsState = getEffectiveSubsystemState(session, 'hst_optics');
-  const guidanceState = getEffectiveSubsystemState(session, 'hst_guidance');
-  const powerState = getEffectiveSubsystemState(session, 'hst_power');
-  const compState = getEffectiveSubsystemState(session, 'hst_computer');
+  const opticsState = getEffectiveSubsystemState(session, 'hst_optics', lang);
+  const guidanceState = getEffectiveSubsystemState(session, 'hst_guidance', lang);
+  const powerState = getEffectiveSubsystemState(session, 'hst_power', lang);
+  const compState = getEffectiveSubsystemState(session, 'hst_computer', lang);
 
   const powerPart = getPartById(session.subsystems.hst_power?.partId || '');
   const maxObsTargets = powerPart?.tier === 'economy' ? 2 : 3;
+
+  useEffect(() => {
+    setOpticsFeedback(null);
+    setGuidanceFeedback(null);
+    setPowerFeedback(null);
+    setScheduleFeedback(null);
+  }, [lang]);
 
   const isDone = (k: HubbleTaskKey) => session.completedSubTasks.includes(k);
 
@@ -164,43 +193,64 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
     if (opticsState.status === 'failed') return;
     if (opticsState.status === 'degraded') {
       sound.playAlert();
+      onFailSubTask?.('A_optics');
       setOpticsFeedback(
-        'Ảnh tinh vân vẫn bị mờ do gương WFC3 hoặc hệ định hướng FGS đang suy giảm! Hãy sửa trước khi chụp.'
+        isEn
+          ? 'The nebula image is still blurred because WFC3 optics or FGS guidance is degraded! Repair before capturing.'
+          : 'Ảnh tinh vân vẫn bị mờ do gương WFC3 hoặc hệ định hướng FGS đang suy giảm! Hãy sửa trước khi chụp.'
       );
       return;
     }
     if (focusError > 6) {
       sound.playAlert();
+      onFailSubTask?.('A_optics');
       setOpticsFeedback(
-        `Tiêu cự gương đang lệch (${focusPct}% — tối ưu 76%–88%). Hãy kéo thanh Tiêu cự cho sao hết nhòe!`
+        isEn
+          ? `Mirror focus is misaligned (${focusPct}% — optimal 76%–88%). Drag the Focus slider until stars are sharp!`
+          : `Tiêu cự gương đang lệch (${focusPct}% — tối ưu 76%–88%). Hãy kéo thanh Tiêu cự cho sao hết nhòe!`
       );
       return;
     }
     if (!exposureOptimal) {
       sound.playAlert();
+      onFailSubTask?.('A_optics');
       setOpticsFeedback(
         exposureSec < 35
-          ? `Phơi sáng ${exposureSec}s quá ngắn, tinh vân bị tối! Hãy tăng lên 35s–65s.`
+          ? isEn
+            ? `Exposure ${exposureSec}s is too short and underexposed! Increase to 35s–65s.`
+            : `Phơi sáng ${exposureSec}s quá ngắn, tinh vân bị tối! Hãy tăng lên 35s–65s.`
+          : isEn
+          ? `Exposure ${exposureSec}s is too long and overexposed! Reduce to 35s–65s.`
           : `Phơi sáng ${exposureSec}s quá lâu, ảnh bị cháy sáng! Hãy giảm về 35s–65s.`
       );
       return;
     }
     if (!filterGood) {
       sound.playAlert();
+      onFailSubTask?.('A_optics');
       setOpticsFeedback(
-        'Bộ lọc UV bị bụi khí tinh vân che mờ! Hãy chuyển sang Bộ lọc Khả kiến hoặc Hồng ngoại.'
+        isEn
+          ? 'The UV filter is blocked by thick nebula dust! Switch to Visible or Infrared.'
+          : 'Bộ lọc Cực tím bị bụi khí tinh vân che mờ! Hãy chuyển sang Bộ lọc Khả kiến hoặc Hồng ngoại.'
       );
       return;
     }
     if (!artifactMasked) {
       sound.playAlert();
+      onFailSubTask?.('A_optics');
       setOpticsFeedback(
-        'Phát hiện đốm nhiễu tia vũ trụ trên cảm biến! Hãy phóng to 2x–3x và chạm trực tiếp vào đốm nhiễu xanh tím để lọc bỏ.'
+        isEn
+          ? 'Cosmic-ray hot pixel detected on the sensor! Zoom in (≥ 1.5x) and tap the glowing magenta artifact directly to filter it out.'
+          : 'Phát hiện đốm nhiễu tia vũ trụ trên cảm biến! Hãy phóng to 2x–3x và chạm trực tiếp vào đốm nhiễu xanh tím để lọc bỏ.'
       );
       return;
     }
     sound.playSuccess();
-    setOpticsFeedback('Đã thu ảnh Tinh vân Đại Bàng sắc nét tuyệt đối và loại bỏ xong điểm nhiễu!');
+    setOpticsFeedback(
+      isEn
+        ? 'Captured razor-sharp Eagle Nebula imagery with cosmic-ray noise removed!'
+        : 'Đã thu ảnh Tinh vân Đại Bàng sắc nét tuyệt đối và loại bỏ xong điểm nhiễu!'
+    );
     onCompleteSubTask('A_optics', { photos: 2 });
   };
 
@@ -219,17 +269,31 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
     if (guidanceState.status === 'failed') return;
     if (guidanceState.status === 'degraded') {
       sound.playAlert();
-      setGuidanceFeedback('Cảm biến FGS đang suy giảm nên góc bị rung lắc! Hãy vào sửa chữa để ổn định.');
+      onFailSubTask?.('B_guidance');
+      setGuidanceFeedback(
+        isEn
+          ? 'FGS sensor is degraded, causing pointing jitter! Repair it first to stabilize.'
+          : 'Cảm biến FGS đang suy giảm nên góc bị rung lắc! Hãy vào sửa chữa để ổn định.'
+      );
       return;
     }
     if (Math.abs(pitchDrift) <= 2 && Math.abs(yawDrift) <= 2) {
       sound.playSuccess();
       setStarLocked(true);
-      setGuidanceFeedback('Đã khóa chặt ngôi sao dẫn đường (sai số < 0.015 giây cung)!');
+      setGuidanceFeedback(
+        isEn
+          ? 'Guide star locked steadily (pointing jitter < 0.015 arcsec)!'
+          : 'Đã khóa chặt ngôi sao dẫn đường (sai số < 0.015 giây cung)!'
+      );
       onCompleteSubTask('B_guidance');
     } else {
       sound.playAlert();
-      setGuidanceFeedback('Tâm ngắm vẫn lệch khỏi ngôi sao dẫn đường! Hãy kéo trực tiếp trên màn hình ngắm về tâm.');
+      onFailSubTask?.('B_guidance');
+      setGuidanceFeedback(
+        isEn
+          ? 'Reticle is still off the guide star! Drag directly on the starfield pad to center it.'
+          : 'Tâm ngắm vẫn lệch khỏi ngôi sao dẫn đường! Hãy kéo trực tiếp trên màn hình ngắm về tâm.'
+      );
     }
   };
 
@@ -244,26 +308,50 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
     if (powerState.status === 'failed') return;
     if (!breakers.fgs || !breakers.wfc3) {
       sound.playAlert();
-      setPowerFeedback('Không thể ngắt cầu dao FGS hoặc WFC3 khi đang quan sát khoa học!');
+      onFailSubTask?.('C_power');
+      setPowerFeedback(
+        isEn
+          ? 'Cannot open FGS or WFC3 circuit breakers during science observations!'
+          : 'Không thể ngắt cầu dao FGS hoặc WFC3 khi đang quan sát khoa học!'
+      );
       return;
     }
     if (!wiringOk) {
       sound.playAlert();
-      setPowerFeedback('Hãy nối đủ dây trên bảng mạch phân phối điện và bật nguồn kiểm tra trước!');
+      onFailSubTask?.('C_power');
+      setPowerFeedback(
+        isEn
+          ? 'Connect all cables on the power bus board and turn on the power switch first!'
+          : 'Hãy nối đủ dây trên bảng mạch phân phối điện và bật nguồn kiểm tra trước!'
+      );
       return;
     }
     if (activePowerTotal > powerBudget) {
       sound.playAlert();
-      setPowerFeedback(`Vượt công suất tổ hợp pin (${activePowerTotal}% > ${powerBudget}%)! Hãy ngắt thiết bị phụ hoặc hạ thanh kéo.`);
+      onFailSubTask?.('C_power');
+      setPowerFeedback(
+        isEn
+          ? `Battery bus load exceeded (${activePowerTotal}% > ${powerBudget}%)! Open backup circuits or lower sliders.`
+          : `Vượt công suất tổ hợp pin (${activePowerTotal}% > ${powerBudget}%)! Hãy ngắt thiết bị phụ hoặc hạ thanh kéo.`
+      );
       return;
     }
     if (allocFgs < 35 || allocWfc3 < 35) {
       sound.playAlert();
-      setPowerFeedback('Cần cấp tối thiểu 35% điện cho Hệ định hướng FGS và 35% cho Camera WFC3.');
+      onFailSubTask?.('C_power');
+      setPowerFeedback(
+        isEn
+          ? 'Supply at least 35% power to FGS Guidance and 35% to the WFC3 Camera.'
+          : 'Cần cấp tối thiểu 35% điện cho Hệ định hướng FGS và 35% cho Camera WFC3.'
+      );
       return;
     }
     sound.playSuccess();
-    setPowerFeedback('Đã nối mạch và cân bằng điện năng hoàn hảo cho ca chụp ảnh thiên văn sâu!');
+    setPowerFeedback(
+      isEn
+        ? 'Power buses wired and balanced for the deep-sky observation shift!'
+        : 'Đã nối mạch và cân bằng điện năng hoàn hảo cho ca chụp ảnh thiên văn sâu!'
+    );
     onCompleteSubTask('C_power');
   };
 
@@ -292,43 +380,95 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
     const activeOrdered = targetQueue.filter((t) => enabledTargets.includes(t.id));
     if (activeOrdered.length === 0) {
       sound.playAlert();
-      setScheduleFeedback('Hãy chọn ít nhất 2 mục tiêu thiên văn vào lịch quan sát!');
+      onFailSubTask?.('D_schedule');
+      setScheduleFeedback(
+        isEn
+          ? 'Select at least 2 astronomical targets for the observation schedule!'
+          : 'Hãy chọn ít nhất 2 mục tiêu thiên văn vào lịch quan sát!'
+      );
       return;
     }
     if (activeOrdered.length > maxObsTargets) {
       sound.playAlert();
+      onFailSubTask?.('D_schedule');
+      const powerPartName = powerPart
+        ? getPartText(powerPart, lang).name
+        : isEn
+        ? 'Power System'
+        : 'Hệ thống nguồn';
       setScheduleFeedback(
-        `Nguồn điện (${powerPart?.name}) chỉ đủ chạy tối đa ${maxObsTargets} mục tiêu trong ca này!`
+        isEn
+          ? `Power pack (${powerPartName}) supports at most ${maxObsTargets} targets in this shift!`
+          : `Nguồn điện (${powerPartName}) chỉ đủ chạy tối đa ${maxObsTargets} mục tiêu trong ca này!`
       );
       return;
     }
     if (activeOrdered.some((t) => t.id === 'moon_test')) {
       sound.playAlert();
-      setScheduleFeedback('Chụp Mặt Trăng quá sáng sẽ làm chói cảm biến WFC3! Hãy bỏ chọn mục tiêu này.');
+      onFailSubTask?.('D_schedule');
+      setScheduleFeedback(
+        isEn
+          ? 'Imaging the bright Moon risks blinding the WFC3 sensor! Deselect this target.'
+          : 'Chụp Mặt Trăng quá sáng sẽ làm chói cảm biến WFC3! Hãy bỏ chọn mục tiêu này.'
+      );
       return;
     }
     if (!enabledTargets.includes('exoplanet') || !enabledTargets.includes('nebula')) {
       sound.playAlert();
-      setScheduleFeedback('Hãy giữ lại 2 mục tiêu ưu tiên hàng đầu: Ngoại hành tinh và Tinh vân Đại Bàng!');
+      onFailSubTask?.('D_schedule');
+      setScheduleFeedback(
+        isEn
+          ? 'Keep the top 2 priority targets selected: Exoplanet Atmosphere and Eagle Nebula!'
+          : 'Hãy giữ lại 2 mục tiêu ưu tiên hàng đầu: Ngoại hành tinh và Tinh vân Đại Bàng!'
+      );
       return;
     }
     const exoIdx = activeOrdered.findIndex((t) => t.id === 'exoplanet');
     const nebIdx = activeOrdered.findIndex((t) => t.id === 'nebula');
     if (exoIdx > nebIdx) {
       sound.playAlert();
-      setScheduleFeedback('Ngoại hành tinh có cửa sổ quá cảnh ngắn — hãy kéo lên vị trí ưu tiên #1 trước Tinh vân!');
+      onFailSubTask?.('D_schedule');
+      setScheduleFeedback(
+        isEn
+          ? 'Exoplanet transit window is short — move it to #1 ahead of the Eagle Nebula!'
+          : 'Ngoại hành tinh có cửa sổ quá cảnh ngắn — hãy kéo lên vị trí ưu tiên #1 trước Tinh vân!'
+      );
       return;
     }
     sound.playSuccess();
-    setScheduleFeedback(`Lịch quan sát theo thứ tự ưu tiên (${activeOrdered.length} mục tiêu) đã khóa thành công!`);
+    setScheduleFeedback(
+      isEn
+        ? `Prioritized observation schedule (${activeOrdered.length} targets) locked in!`
+        : `Lịch quan sát theo thứ tự ưu tiên (${activeOrdered.length} mục tiêu) đã khóa thành công!`
+    );
     onCompleteSubTask('D_schedule');
   };
 
-  const tasks: { key: HubbleTaskKey; label: string; icon: React.ReactNode }[] = [
-    { key: 'A_optics', label: 'A. Soi & Chỉnh quang học', icon: <Eye className="w-4 h-4" /> },
-    { key: 'B_guidance', label: 'B. Bắt sao FGS', icon: <Compass className="w-4 h-4" /> },
-    { key: 'C_power', label: 'C. Mạch & Cầu dao điện', icon: <BatteryCharging className="w-4 h-4" /> },
-    { key: 'D_schedule', label: 'D. Kéo-thả lịch sao', icon: <CalendarClock className="w-4 h-4" /> },
+  const tasks: SubTaskItem<HubbleTaskKey>[] = [
+    {
+      key: 'A_optics',
+      label: isEn ? 'A. Optics & Noise Filter' : 'A. Soi & Chỉnh quang học',
+      icon: <Eye className="w-4 h-4" />,
+      hasError: opticsState.status === 'failed',
+    },
+    {
+      key: 'B_guidance',
+      label: isEn ? 'B. FGS Star Lock' : 'B. Bắt sao FGS',
+      icon: <Compass className="w-4 h-4" />,
+      hasError: guidanceState.status === 'failed',
+    },
+    {
+      key: 'C_power',
+      label: isEn ? 'C. Power Bus & Breakers' : 'C. Mạch & Cầu dao điện',
+      icon: <BatteryCharging className="w-4 h-4" />,
+      hasError: powerState.status === 'failed',
+    },
+    {
+      key: 'D_schedule',
+      label: isEn ? 'D. Observation Queue' : 'D. Kéo-thả lịch sao',
+      icon: <CalendarClock className="w-4 h-4" />,
+      hasError: compState.status === 'failed',
+    },
   ];
 
   const photoSrc = imgFallback
@@ -339,35 +479,14 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {tasks.map((t) => {
-          const active = activeTask === t.key;
-          const done = isDone(t.key);
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                setActiveTask(t.key);
-              }}
-              className={`min-h-12 px-3.5 py-2.5 rounded-2xl border-2 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                active
-                  ? 'bg-sky-500 text-white border-sky-600 shadow-sm'
-                  : done
-                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                  : 'bg-white text-sky-950 border-sky-200 hover:border-sky-400'
-              }`}
-            >
-              <span className="flex items-center gap-1.5 truncate">
-                {t.icon}
-                <span className="truncate">{t.label}</span>
-              </span>
-              {done && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-            </button>
-          );
-        })}
-      </div>
+      <SubTaskStatusBar
+        tasks={tasks}
+        activeTask={activeTask}
+        completedTasks={session.completedSubTasks}
+        failedTasks={session.failedSubTasks}
+        lang={lang}
+        onSelect={setActiveTask}
+      />
 
       {/* TASK A: INTERACTIVE OPTICS + BEFORE/AFTER + ZOOM/PAN ANOMALY */}
       {activeTask === 'A_optics' && (
@@ -375,7 +494,11 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-sky-950 font-display flex items-center gap-2">
               <SlidersHorizontal className="w-5 h-5 text-sky-600" />
-              <span>Nhiệm vụ A: Chỉnh quang học WFC3, So sánh Trước/Sau & Lọc nhiễu ảnh</span>
+              <span>
+                {isEn
+                  ? 'Task A: Adjust WFC3 Optics, Compare Before/After & Filter Noise'
+                  : 'Nhiệm vụ A: Chỉnh quang học WFC3, So sánh Trước/Sau & Lọc nhiễu ảnh'}
+              </span>
             </h2>
             <div className="flex items-center gap-1.5">
               <button
@@ -388,7 +511,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                 className="px-2.5 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-extrabold flex items-center gap-1 cursor-pointer"
               >
                 <ZoomOut className="w-3.5 h-3.5" />
-                <span>Thu</span>
+                <span>{isEn ? 'Out' : 'Thu'}</span>
               </button>
               <span className="px-2.5 py-1.5 rounded-xl bg-sky-100 text-sky-950 text-xs font-extrabold tabular-nums">
                 {zoomLevel.toFixed(1)}x
@@ -402,7 +525,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                 className="px-2.5 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-extrabold flex items-center gap-1 cursor-pointer"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
-                <span>Phóng to</span>
+                <span>{isEn ? 'Zoom' : 'Phóng to'}</span>
               </button>
             </div>
           </div>
@@ -410,13 +533,15 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
           <SubsystemLockNotice
             session={session}
             subsystemId="hst_optics"
-            actionLabel="Gương & Cảm biến WFC3"
+            actionLabel={isEn ? 'WFC3 Mirror & Sensor' : 'Gương & Cảm biến WFC3'}
+            lang={lang}
             onOpenRepair={onOpenRepair}
           />
           <SubsystemLockNotice
             session={session}
             subsystemId="hst_guidance"
-            actionLabel="Hệ định hướng FGS"
+            actionLabel={isEn ? 'FGS Guidance System' : 'Hệ định hướng FGS'}
+            lang={lang}
             onOpenRepair={onOpenRepair}
           />
 
@@ -425,7 +550,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             {/* Base UNCALIBRATED ("Trước") layer */}
             <img
               src={photoSrc}
-              alt="Ảnh gốc chưa hiệu chỉnh"
+              alt={isEn ? 'Uncalibrated raw nebula image' : 'Ảnh gốc chưa hiệu chỉnh'}
               referrerPolicy="no-referrer"
               onError={() => setImgFallback(true)}
               style={{
@@ -442,7 +567,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             >
               <img
                 src={photoSrc}
-                alt="Ảnh tinh vân sau hiệu chỉnh"
+                alt={isEn ? 'Calibrated nebula image' : 'Ảnh tinh vân sau hiệu chỉnh'}
                 referrerPolicy="no-referrer"
                 style={{
                   transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
@@ -463,12 +588,20 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                 onClick={() => {
                   if (zoomLevel < 1.5) {
                     sound.playAlert();
-                    setOpticsFeedback('Hãy bấm Phóng to (≥ 1.5x) để soi rõ và chạm lọc đốm nhiễu tia vũ trụ!');
+                    setOpticsFeedback(
+                      isEn
+                        ? 'Click Zoom (≥ 1.5x) to spot and tap the cosmic-ray artifact!'
+                        : 'Hãy bấm Phóng to (≥ 1.5x) để soi rõ và chạm lọc đốm nhiễu tia vũ trụ!'
+                    );
                     return;
                   }
                   sound.playSuccess();
                   setArtifactMasked(true);
-                  setOpticsFeedback('Đã đánh dấu & lọc bỏ thành công đốm nhiễu tia vũ trụ trên cảm biến!');
+                  setOpticsFeedback(
+                    isEn
+                      ? 'Cosmic-ray hot-pixel cluster masked and removed from the sensor!'
+                      : 'Đã đánh dấu & lọc bỏ thành công đốm nhiễu tia vũ trụ trên cảm biến!'
+                  );
                 }}
                 style={{
                   left: `calc(64% + ${panOffset.x * zoomLevel}px)`,
@@ -479,7 +612,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                     ? 'w-7 h-7 bg-emerald-500/85 border-white text-white'
                     : 'w-8 h-8 bg-fuchsia-500/80 border-amber-300 text-white animate-pulse'
                 }`}
-                title="Đốm nhiễu tia vũ trụ — Chạm để lọc bỏ"
+                title={isEn ? 'Cosmic-ray noise artifact — Tap to filter' : 'Đốm nhiễu tia vũ trụ — Chạm để lọc bỏ'}
               >
                 {artifactMasked ? <CheckCircle2 className="w-4 h-4" /> : <Search className="w-4 h-4" />}
               </button>
@@ -492,10 +625,10 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             />
 
             <div className="pointer-events-none absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-white/90 text-[11px] font-extrabold text-sky-950">
-              TRƯỚC (Chưa chỉnh)
+              {isEn ? 'BEFORE (Raw)' : 'TRƯỚC (Chưa chỉnh)'}
             </div>
             <div className="pointer-events-none absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-emerald-500/95 text-[11px] font-extrabold text-white">
-              SAU (Tiêu cự {focusPct}% · {exposureSec}s)
+              {isEn ? `AFTER (Focus ${focusPct}% · ${exposureSec}s)` : `SAU (Tiêu cự ${focusPct}% · ${exposureSec}s)`}
             </div>
 
             {zoomLevel > 1 && (
@@ -536,7 +669,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 space-y-1.5">
               <div className="flex justify-between text-xs font-extrabold text-sky-950">
-                <span>Tiêu cự gương (Focus)</span>
+                <span>{isEn ? 'Mirror Focus' : 'Tiêu cự gương (Focus)'}</span>
                 <span className="tabular-nums text-sky-700">{focusPct}%</span>
               </div>
               <input
@@ -551,13 +684,19 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                 className="w-full accent-sky-500 cursor-pointer"
               />
               <div className="text-[11px] font-semibold text-sky-800">
-                {focusError <= 6 ? 'Tiêu cự sắc nét ✓' : 'Đang bị mờ — chỉnh cho ảnh rõ'}
+                {focusError <= 6
+                  ? isEn
+                    ? 'Crisp focus ✓'
+                    : 'Tiêu cự sắc nét ✓'
+                  : isEn
+                  ? 'Blurry — adjust until crisp'
+                  : 'Đang bị mờ — chỉnh cho ảnh rõ'}
               </div>
             </div>
 
             <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 space-y-1.5">
               <div className="flex justify-between text-xs font-extrabold text-sky-950">
-                <span>Phơi sáng (Exposure)</span>
+                <span>{isEn ? 'Exposure Time' : 'Phơi sáng (Exposure)'}</span>
                 <span className="tabular-nums text-sky-700">{exposureSec}s</span>
               </div>
               <input
@@ -572,13 +711,23 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                 className="w-full accent-amber-500 cursor-pointer"
               />
               <div className="text-[11px] font-semibold text-sky-800">
-                {exposureOptimal ? 'Ánh sáng cân bằng ✓' : exposureSec < 35 ? 'Quá tối' : 'Cháy sáng'}
+                {exposureOptimal
+                  ? isEn
+                    ? 'Balanced exposure ✓'
+                    : 'Ánh sáng cân bằng ✓'
+                  : exposureSec < 35
+                  ? isEn
+                    ? 'Too dark'
+                    : 'Quá tối'
+                  : isEn
+                  ? 'Overexposed'
+                  : 'Cháy sáng'}
               </div>
             </div>
 
             <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 space-y-1.5">
               <div className="flex justify-between text-xs font-extrabold text-sky-950">
-                <span>Thanh so sánh Trước / Sau</span>
+                <span>{isEn ? 'Before / After Split' : 'Thanh so sánh Trước / Sau'}</span>
                 <span className="tabular-nums text-sky-700">{compareSplit}%</span>
               </div>
               <input
@@ -591,9 +740,9 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
               />
               <div className="flex gap-1.5 pt-0.5">
                 {([
-                  { id: 'uv', label: 'UV' },
-                  { id: 'visible', label: 'Khả kiến' },
-                  { id: 'ir', label: 'Hồng ngoại' },
+                  { id: 'uv', label: isEn ? 'UV' : 'Cực tím' },
+                  { id: 'visible', label: isEn ? 'Visible' : 'Khả kiến' },
+                  { id: 'ir', label: isEn ? 'Infrared' : 'Hồng ngoại' },
                 ] as { id: OpticalFilter; label: string }[]).map((f) => (
                   <button
                     key={f.id}
@@ -628,7 +777,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             onClick={handleCaptureDeepSpace}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer shadow-sm"
           >
-            Chụp & Lưu ảnh thiên hà sâu
+            {isEn ? 'Capture & Save Deep-Sky Image' : 'Chụp & Lưu ảnh thiên hà sâu'}
           </button>
         </div>
       )}
@@ -638,17 +787,20 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-sky-950 font-display">
-              Nhiệm vụ B: Kéo tâm ngắm FGS bắt chặt ngôi sao dẫn đường
+              {isEn
+                ? 'Task B: Drag FGS Crosshair to Lock Onto Guide Star'
+                : 'Nhiệm vụ B: Kéo tâm ngắm FGS bắt chặt ngôi sao dẫn đường'}
             </h2>
             <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-900 text-xs font-extrabold tabular-nums">
-              Sai lệch hiện tại: {pointingErrorArcsec}″
+              {isEn ? `Pointing offset: ${pointingErrorArcsec}″` : `Sai lệch hiện tại: ${pointingErrorArcsec}″`}
             </span>
           </div>
 
           <SubsystemLockNotice
             session={session}
             subsystemId="hst_guidance"
-            actionLabel="Cảm biến định hướng FGS & Con quay"
+            actionLabel={isEn ? 'FGS Sensor & Gyroscopes' : 'Cảm biến định hướng FGS & Con quay'}
+            lang={lang}
             onOpenRepair={onOpenRepair}
           />
 
@@ -695,14 +847,16 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
               </div>
 
               <div className="pointer-events-none absolute bottom-2 left-3 text-[11px] font-bold text-sky-200">
-                Chạm hoặc kéo trong khung để lái ống kính về ngôi sao vàng
+                {isEn
+                  ? 'Tap or drag inside the pad to center the reticle on the amber star'
+                  : 'Chạm hoặc kéo trong khung để lái ống kính về ngôi sao vàng'}
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-extrabold text-sky-900">
-                  <span>Góc Ngẩng (Pitch — Đưa về 0)</span>
+                  <span>{isEn ? 'Pitch Axis (Bring to 0)' : 'Góc Ngẩng (Pitch — Đưa về 0)'}</span>
                   <span className="tabular-nums text-sky-700">{pitchDrift}</span>
                 </div>
                 <input
@@ -721,7 +875,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-extrabold text-sky-900">
-                  <span>Góc Xoay Ngang (Yaw — Đưa về 0)</span>
+                  <span>{isEn ? 'Yaw Axis (Bring to 0)' : 'Góc Xoay Ngang (Yaw — Đưa về 0)'}</span>
                   <span className="tabular-nums text-sky-700">{yawDrift}</span>
                 </div>
                 <input
@@ -744,7 +898,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                 onClick={handleLockGuideStar}
                 className="w-full min-h-12 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer shadow-sm"
               >
-                Khóa ngôi sao dẫn đường
+                {isEn ? 'Lock Guide Star' : 'Khóa ngôi sao dẫn đường'}
               </button>
             </div>
           </div>
@@ -762,7 +916,9 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-sky-950 font-display">
-              Nhiệm vụ C: Nối mạch & Điều phối cầu dao năng lượng Hubble
+              {isEn
+                ? 'Task C: Wire Hubble Power Bus & Balance Circuit Breakers'
+                : 'Nhiệm vụ C: Nối mạch & Điều phối cầu dao năng lượng Hubble'}
             </h2>
             <span
               className={`px-3 py-1 rounded-xl text-xs font-extrabold tabular-nums ${
@@ -771,46 +927,58 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                   : 'bg-emerald-100 text-emerald-800'
               }`}
             >
-              Tổng tải: {activePowerTotal}% / {powerBudget}%
+              {isEn ? `Total Load: ${activePowerTotal}% / ${powerBudget}%` : `Tổng tải: ${activePowerTotal}% / ${powerBudget}%`}
             </span>
           </div>
 
           <SubsystemLockNotice
             session={session}
             subsystemId="hst_power"
-            actionLabel="Pin Mặt Trời & Tổ hợp Pin"
+            actionLabel={isEn ? 'Solar Arrays & Batteries' : 'Pin Mặt Trời & Tổ hợp Pin'}
+            lang={lang}
             onOpenRepair={onOpenRepair}
           />
 
           <CircuitWiringBoard
-            title="Bảng đấu nối thanh cái điện Hubble (28V DC)"
-            instruction="Kéo hoặc chạm nối đúng dây từ Cụm Pin tới FGS, Camera WFC3 và Sưởi ống kính rồi bật nguồn."
+            title={isEn ? 'Hubble 28V DC Power Bus Patch Panel' : 'Bảng đấu nối thanh cái điện Hubble (28V DC)'}
+            instruction={
+              isEn
+                ? 'Connect each battery rail to FGS, WFC3 Camera, and Mirror Heater, then flip the main power switch.'
+                : 'Kéo hoặc chạm nối đúng dây từ Cụm Pin tới FGS, Camera WFC3 và Sưởi ống kính rồi bật nguồn.'
+            }
+            lang={lang}
             disabled={powerState.status === 'failed'}
             leftNodes={[
-              { id: 'bus_guidance', label: 'Đường nguồn FGS 28V', color: '#0ea5e9' },
-              { id: 'bus_optics', label: 'Đường cao áp WFC3', color: '#10b981' },
-              { id: 'bus_thermal', label: 'Cáp sưởi ổn nhiệt', color: '#f59e0b' },
+              { id: 'bus_guidance', label: isEn ? '28V FGS Supply Rail' : 'Đường nguồn FGS 28V', color: '#0ea5e9' },
+              { id: 'bus_optics', label: isEn ? 'WFC3 High-Voltage Line' : 'Đường cao áp WFC3', color: '#10b981' },
+              { id: 'bus_thermal', label: isEn ? 'Heater Thermal Line' : 'Cáp sưởi ổn nhiệt', color: '#f59e0b' },
             ]}
             rightNodes={[
-              { id: 'port_optics', label: 'Cổng Camera WFC3', color: '#10b981' },
-              { id: 'port_thermal', label: 'Vòng sưởi gương', color: '#f59e0b' },
-              { id: 'port_guidance', label: 'Cổng Cảm biến FGS', color: '#0ea5e9' },
+              { id: 'port_optics', label: isEn ? 'WFC3 Camera Port' : 'Cổng Camera WFC3', color: '#10b981' },
+              { id: 'port_thermal', label: isEn ? 'Mirror Heater Ring' : 'Vòng sưởi gương', color: '#f59e0b' },
+              { id: 'port_guidance', label: isEn ? 'FGS Sensor Port' : 'Cổng Cảm biến FGS', color: '#0ea5e9' },
             ]}
             expectedConnections={[
               {
                 fromId: 'bus_guidance',
                 toId: 'port_guidance',
-                errorHint: 'Cổng FGS cần đúng đường nguồn FGS 28V ổn áp!',
+                errorHint: isEn
+                  ? 'The FGS Port requires the regulated 28V FGS Supply Rail!'
+                  : 'Cổng FGS cần đúng đường nguồn FGS 28V ổn áp!',
               },
               {
                 fromId: 'bus_optics',
                 toId: 'port_optics',
-                errorHint: 'Camera WFC3 cần đấu vào đường cao áp WFC3!',
+                errorHint: isEn
+                  ? 'The WFC3 Camera must connect to the WFC3 High-Voltage Line!'
+                  : 'Camera WFC3 cần đấu vào đường cao áp WFC3!',
               },
               {
                 fromId: 'bus_thermal',
                 toId: 'port_thermal',
-                errorHint: 'Vòng sưởi gương phải nối với Cáp sưởi ổn nhiệt!',
+                errorHint: isEn
+                  ? 'The Mirror Heater Ring must connect to the Heater Thermal Line!'
+                  : 'Vòng sưởi gương phải nối với Cáp sưởi ổn nhiệt!',
               },
             ]}
             onSuccess={() => setWiringOk(true)}
@@ -824,7 +992,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             {[
               {
                 key: 'fgs' as const,
-                label: 'Hệ định hướng FGS (≥ 35%)',
+                label: isEn ? 'FGS Guidance (≥ 35%)' : 'Hệ định hướng FGS (≥ 35%)',
                 val: allocFgs,
                 setVal: setAllocFgs,
                 min: 15,
@@ -832,7 +1000,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
               },
               {
                 key: 'wfc3' as const,
-                label: 'Camera WFC3 (≥ 35%)',
+                label: isEn ? 'WFC3 Camera (≥ 35%)' : 'Camera WFC3 (≥ 35%)',
                 val: allocWfc3,
                 setVal: setAllocWfc3,
                 min: 15,
@@ -840,7 +1008,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
               },
               {
                 key: 'heater' as const,
-                label: 'Sưởi ấm vỏ ống kính',
+                label: isEn ? 'Optics Shroud Heater' : 'Sưởi ấm vỏ ống kính',
                 val: allocHeater,
                 setVal: setAllocHeater,
                 min: 5,
@@ -848,7 +1016,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
               },
               {
                 key: 'gyroBackup' as const,
-                label: 'Con quay dự phòng #4',
+                label: isEn ? 'Backup Gyroscope #4' : 'Con quay dự phòng #4',
                 val: allocGyro,
                 setVal: setAllocGyro,
                 min: 5,
@@ -876,7 +1044,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                         on ? 'bg-emerald-500 text-white' : 'bg-slate-300 text-slate-800'
                       }`}
                     >
-                      {on ? 'ĐANG BẬT' : 'ĐÃ NGẮT'}
+                      {on ? (isEn ? 'CLOSED (ON)' : 'ĐANG BẬT') : isEn ? 'OPEN (OFF)' : 'ĐÃ NGẮT'}
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
@@ -913,7 +1081,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             onClick={handleConfirmPower}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer shadow-sm"
           >
-            Xác nhận lưới điện Hubble
+            {isEn ? 'Confirm Hubble Power Grid' : 'Xác nhận lưới điện Hubble'}
           </button>
         </div>
       )}
@@ -924,21 +1092,26 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold text-sky-950 font-display">
-                Nhiệm vụ D: Kéo & Sắp xếp lịch quan sát thiên văn
+                {isEn
+                  ? 'Task D: Drag & Reorder Science Observation Queue'
+                  : 'Nhiệm vụ D: Kéo & Sắp xếp lịch quan sát thiên văn'}
               </h2>
               <p className="text-xs font-semibold text-sky-800">
-                Chọn mục tiêu hợp lý (tối đa {maxObsTargets} mục tiêu) và kéo mục tiêu khẩn cấp #1 lên đầu hàng đợi!
+                {isEn
+                  ? `Select valid targets (max ${maxObsTargets}) and move Urgent Priority #1 to the top of the queue!`
+                  : `Chọn mục tiêu hợp lý (tối đa ${maxObsTargets} mục tiêu) và kéo mục tiêu khẩn cấp #1 lên đầu hàng đợi!`}
               </p>
             </div>
             <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-900 text-xs font-extrabold">
-              Đã bật: {enabledTargets.length} / {maxObsTargets}
+              {isEn ? `Selected: ${enabledTargets.length} / ${maxObsTargets}` : `Đã bật: ${enabledTargets.length} / ${maxObsTargets}`}
             </span>
           </div>
 
           <SubsystemLockNotice
             session={session}
             subsystemId="hst_computer"
-            actionLabel="Máy tính lập lịch quan sát"
+            actionLabel={isEn ? 'Observation Flight Computer' : 'Máy tính lập lịch quan sát'}
+            lang={lang}
             onOpenRepair={onOpenRepair}
           />
 
@@ -968,11 +1141,12 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                       #{index + 1}
                     </span>
                     <div className="min-w-0">
-                      <div className="text-xs sm:text-sm font-extrabold text-sky-950 truncate">
-                        {target.name}
+                      <div className="text-xs sm:text-sm font-extrabold text-sky-950 leading-snug break-words">
+                        {isEn ? target.nameEn : target.name}
                       </div>
                       <div className="text-[11px] font-medium text-sky-800">
-                        {target.note} · Tiêu thụ {target.energy}% pin
+                        {isEn ? target.noteEn : target.note} ·{' '}
+                        {isEn ? `Uses ${target.energy}% battery` : `Tiêu thụ ${target.energy}% pin`}
                       </div>
                     </div>
                   </div>
@@ -982,7 +1156,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                       type="button"
                       disabled={index === 0 || compState.status === 'failed'}
                       onClick={() => moveTarget(index, index - 1)}
-                      aria-label="Đưa mục tiêu lên"
+                      aria-label={isEn ? 'Move target up' : 'Đưa mục tiêu lên'}
                       className="w-8 h-8 rounded-lg bg-white border border-sky-200 text-sky-900 disabled:opacity-35 flex items-center justify-center cursor-pointer"
                     >
                       <ArrowUp className="w-4 h-4" />
@@ -991,7 +1165,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                       type="button"
                       disabled={index === targetQueue.length - 1 || compState.status === 'failed'}
                       onClick={() => moveTarget(index, index + 1)}
-                      aria-label="Đưa mục tiêu xuống"
+                      aria-label={isEn ? 'Move target down' : 'Đưa mục tiêu xuống'}
                       className="w-8 h-8 rounded-lg bg-white border border-sky-200 text-sky-900 disabled:opacity-35 flex items-center justify-center cursor-pointer"
                     >
                       <ArrowDown className="w-4 h-4" />
@@ -1006,7 +1180,13 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
                           : 'bg-white text-sky-900 border border-sky-200'
                       }`}
                     >
-                      {isEnabled ? 'Đã đưa vào lịch ✓' : 'Thêm vào lịch'}
+                      {isEnabled
+                        ? isEn
+                          ? 'In Queue ✓'
+                          : 'Đã đưa vào lịch ✓'
+                        : isEn
+                        ? 'Add to Queue'
+                        : 'Thêm vào lịch'}
                     </button>
                   </div>
                 </div>
@@ -1026,7 +1206,7 @@ export const HubbleSimulator: React.FC<HubbleSimulatorProps> = ({
             onClick={handleConfirmSchedule}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer shadow-sm"
           >
-            Chạy kế hoạch quan sát
+            {isEn ? 'Execute Observation Plan' : 'Chạy kế hoạch quan sát'}
           </button>
         </div>
       )}

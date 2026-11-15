@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   EquipmentSubsystemId,
+  Language,
   MissionSessionState,
 } from '../../types/game';
 import {
@@ -8,6 +9,7 @@ import {
   getPartById,
 } from '../../data/equipmentSystems';
 import { SubsystemLockNotice } from './SubsystemLockNotice';
+import { SubTaskStatusBar, SubTaskItem } from './SubTaskStatusBar';
 import { CircuitWiringBoard } from '../interactive/CircuitWiringBoard';
 import { sound } from '../../services/sound';
 import {
@@ -22,10 +24,16 @@ import {
 } from 'lucide-react';
 
 interface IssSimulatorProps {
+  lang: Language;
   session: MissionSessionState;
   onUpdateSession: (session: MissionSessionState) => void;
   onOpenRepair: (targetSubsystem?: EquipmentSubsystemId) => void;
-  onCompleteSubTask: (taskId: string, extras?: { photos?: number; samples?: number }) => void;
+  onCompleteSubTask: (
+    taskId: string,
+    extras?: { photos?: number; samples?: number },
+    sessionPatch?: Partial<MissionSessionState>
+  ) => void;
+  onFailSubTask?: (taskId: string, sessionPatch?: Partial<MissionSessionState>) => void;
 }
 
 type IssTaskKey = 'A_power' | 'B_thermal' | 'C_comms' | 'D_resources';
@@ -33,22 +41,55 @@ type IssTaskKey = 'A_power' | 'B_thermal' | 'C_comms' | 'D_resources';
 interface SupplyCrate {
   id: string;
   label: string;
+  labelEn: string;
   targetModule: 'zvezda' | 'destiny' | 'veggie';
   kind: 'Nước & Oxy' | 'Thí nghiệm' | 'Thực phẩm';
+  kindEn: 'Water & O₂' | 'Science' | 'Food';
 }
 
 const SUPPLY_CRATES: SupplyCrate[] = [
-  { id: 'c_o2', label: 'Bình Oxy & Nước uống (Ưu tiên sinh mạng)', targetModule: 'zvezda', kind: 'Nước & Oxy' },
-  { id: 'c_food', label: 'Hộp Lương thực & Y tế Phi hành đoàn', targetModule: 'zvezda', kind: 'Thực phẩm' },
-  { id: 'c_water_lab', label: 'Bình nước tái chế cho Vườn cây Veggie', targetModule: 'veggie', kind: 'Nước & Oxy' },
-  { id: 'c_filter', label: 'Bộ lọc không khí & Mẫu thí nghiệm Destiny', targetModule: 'destiny', kind: 'Thí nghiệm' },
+  {
+    id: 'c_o2',
+    label: 'Bình Oxy & Nước uống (Ưu tiên sinh mạng)',
+    labelEn: 'O₂ & Drinking Water Tanks (Life Priority)',
+    targetModule: 'zvezda',
+    kind: 'Nước & Oxy',
+    kindEn: 'Water & O₂',
+  },
+  {
+    id: 'c_food',
+    label: 'Hộp Lương thực & Y tế Phi hành đoàn',
+    labelEn: 'Crew Rations & Medical Kit',
+    targetModule: 'zvezda',
+    kind: 'Thực phẩm',
+    kindEn: 'Food',
+  },
+  {
+    id: 'c_water_lab',
+    label: 'Bình nước tái chế cho Vườn cây Veggie',
+    labelEn: 'Recycled Water Flask for Veggie Habitat',
+    targetModule: 'veggie',
+    kind: 'Nước & Oxy',
+    kindEn: 'Water & O₂',
+  },
+  {
+    id: 'c_filter',
+    label: 'Bộ lọc không khí & Mẫu thí nghiệm Destiny',
+    labelEn: 'Air Filter & Destiny Lab Samples',
+    targetModule: 'destiny',
+    kind: 'Thí nghiệm',
+    kindEn: 'Science',
+  },
 ];
 
 export const IssSimulator: React.FC<IssSimulatorProps> = ({
+  lang,
   session,
   onOpenRepair,
   onCompleteSubTask,
+  onFailSubTask,
 }) => {
+  const isEn = lang === 'en';
   const [activeTask, setActiveTask] = useState<IssTaskKey>('A_power');
 
   // Task A: Breaker Switches + Power Distribution
@@ -81,10 +122,10 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
   const [selectedCrateId, setSelectedCrateId] = useState<string | null>(null);
   const [resourceFeedback, setResourceFeedback] = useState<string | null>(null);
 
-  const powerState = getEffectiveSubsystemState(session, 'iss_power');
-  const thermState = getEffectiveSubsystemState(session, 'iss_thermal');
-  const commsState = getEffectiveSubsystemState(session, 'iss_comms');
-  const lifeState = getEffectiveSubsystemState(session, 'iss_lifesupport');
+  const powerState = getEffectiveSubsystemState(session, 'iss_power', lang);
+  const thermState = getEffectiveSubsystemState(session, 'iss_thermal', lang);
+  const commsState = getEffectiveSubsystemState(session, 'iss_comms', lang);
+  const lifeState = getEffectiveSubsystemState(session, 'iss_lifesupport', lang);
 
   const powerPart = getPartById(session.subsystems.iss_power?.partId || '');
   const eclipseBudgetPct =
@@ -99,6 +140,13 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
       : 120;
 
   const isDone = (k: IssTaskKey) => session.completedSubTasks.includes(k);
+
+  useEffect(() => {
+    setPowerFeedback(null);
+    setThermalFeedback(null);
+    setCommsFeedback(null);
+    setResourceFeedback(null);
+  }, [lang]);
 
   const totalPowerAllocated =
     (lifeOn ? allocLife : 0) +
@@ -132,23 +180,31 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
 
     if (totalPowerAllocated > eclipseBudgetPct) {
       sound.playAlert();
+      onFailSubTask?.('A_power');
       setPowerFeedback(
-        `Cảnh báo quá tải (${totalPowerAllocated}% > ${eclipseBudgetPct}%)! Hãy ngắt cầu dao khoang phụ hoặc giảm công suất Phòng thí nghiệm.`
+        isEn
+          ? `Overload warning (${totalPowerAllocated}% > ${eclipseBudgetPct}%)! Trip an auxiliary breaker or reduce Columbus Lab draw.`
+          : `Cảnh báo quá tải (${totalPowerAllocated}% > ${eclipseBudgetPct}%)! Hãy ngắt cầu dao khoang phụ hoặc giảm công suất Phòng thí nghiệm.`
       );
       return;
     }
 
     if (!lifeOn || allocLife < 45 || !thermOn || allocThermal < 20) {
       sound.playAlert();
+      onFailSubTask?.('A_power');
       setPowerFeedback(
-        'Nguy hiểm! Hệ Hỗ trợ sự sống (≥45%) và Điều hòa nhiệt (≥20%) bắt buộc phải bật và đủ điện.'
+        isEn
+          ? 'Critical! Life Support & O₂ (≥45%) and Ammonia Cooling (≥20%) must remain powered.'
+          : 'Nguy hiểm! Hệ Hỗ trợ sự sống (≥45%) và Điều hòa nhiệt (≥20%) bắt buộc phải bật và đủ điện.'
       );
       return;
     }
 
     sound.playSuccess();
     setPowerFeedback(
-      `Lưới điện cân bằng an toàn (${totalPowerAllocated}/${eclipseBudgetPct}%) trong suốt 45 phút bóng tối!`
+      isEn
+        ? `Power grid balanced safely (${totalPowerAllocated}/${eclipseBudgetPct}%) for the 45-minute orbital eclipse!`
+        : `Lưới điện cân bằng an toàn (${totalPowerAllocated}/${eclipseBudgetPct}%) trong suốt 45 phút bóng tối!`
     );
     onCompleteSubTask('A_power');
   };
@@ -157,21 +213,39 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
     if (thermState.status === 'failed') return;
     if (valveLoopA) {
       sound.playAlert();
-      setThermalFeedback('Van Vòng A đang bị tắc nghẽn gây kẹt áp suất! Hãy đóng Van A và mở Van Vòng B dự phòng.');
+      onFailSubTask?.('B_thermal');
+      setThermalFeedback(
+        isEn
+          ? 'Loop A valve is clogged causing a pressure jam! Close Valve A and open Backup Loop B.'
+          : 'Van Vòng A đang bị tắc nghẽn gây kẹt áp suất! Hãy đóng Van A và mở Van Vòng B dự phòng.'
+      );
       return;
     }
     if (!valveLoopB || !pumpOn || flowRateLpm < 65) {
       sound.playAlert();
-      setThermalFeedback('Hãy mở Van Vòng B, bật Bơm Amoniac và tăng lưu lượng ≥ 65 L/phút để hạ nhiệt khoang Destiny.');
+      onFailSubTask?.('B_thermal');
+      setThermalFeedback(
+        isEn
+          ? 'Open Loop B Valve, switch on Ammonia Pump, and raise flow rate ≥ 65 L/min to cool Destiny Lab.'
+          : 'Hãy mở Van Vòng B, bật Bơm Amoniac và tăng lưu lượng ≥ 65 L/phút để hạ nhiệt khoang Destiny.'
+      );
       return;
     }
     if (destinyTempC > 24.5) {
       sound.playClick();
-      setThermalFeedback(`Nhiệt độ đang hạ xuống (${destinyTempC}°C)... Chờ thêm vài giây về mức an toàn ≤ 24.5°C rồi xác nhận!`);
+      setThermalFeedback(
+        isEn
+          ? `Temperature dropping (${destinyTempC}°C)... Wait a few seconds until ≤ 24.5°C before confirming!`
+          : `Nhiệt độ đang hạ xuống (${destinyTempC}°C)... Chờ thêm vài giây về mức an toàn ≤ 24.5°C rồi xác nhận!`
+      );
       return;
     }
     sound.playSuccess();
-    setThermalFeedback(`Khoang Destiny đã hạ nhiệt ổn định về ${destinyTempC}°C!`);
+    setThermalFeedback(
+      isEn
+        ? `Destiny module stabilized at ${destinyTempC}°C!`
+        : `Khoang Destiny đã hạ nhiệt ổn định về ${destinyTempC}°C!`
+    );
     onCompleteSubTask('B_thermal');
   };
 
@@ -181,16 +255,30 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
     if (commsState.status === 'failed') return;
     if (!kuWired) {
       sound.playAlert();
-      setCommsFeedback('Mạch điện bộ phát Ku-Band chưa nối xong hoặc chưa bật nguồn kiểm tra!');
+      onFailSubTask?.('C_comms');
+      setCommsFeedback(
+        isEn
+          ? 'Ku-Band circuit in Step 1 is not wired and powered on yet!'
+          : 'Mạch điện bộ phát Ku-Band chưa nối xong hoặc chưa bật nguồn kiểm tra!'
+      );
       return;
     }
     if (!tdrsLocked) {
       sound.playAlert();
-      setCommsFeedback(`Chảo ăng-ten (${tdrsAimDeg}°) chưa hướng trúng vệ tinh TDRS (85°–105°)!`);
+      onFailSubTask?.('C_comms');
+      setCommsFeedback(
+        isEn
+          ? `Antenna dish (${tdrsAimDeg}°) missed the TDRS relay satellite (85°–105°)!`
+          : `Chảo ăng-ten (${tdrsAimDeg}°) chưa hướng trúng vệ tinh TDRS (85°–105°)!`
+      );
       return;
     }
     sound.playSuccess();
-    setCommsFeedback('Đã khóa liên lạc liên tục qua vệ tinh TDRS với Trung tâm Điều khiển Houston!');
+    setCommsFeedback(
+      isEn
+        ? 'Locked continuous TDRS relay telemetry link with Houston Mission Control!'
+        : 'Đã khóa liên lạc liên tục qua vệ tinh TDRS với Trung tâm Điều khiển Houston!'
+    );
     onCompleteSubTask('C_comms');
   };
 
@@ -208,67 +296,82 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
     const assignedCount = Object.keys(crateAssignments).length;
     if (assignedCount < SUPPLY_CRATES.length) {
       sound.playAlert();
-      setResourceFeedback(`Hãy kéo thả hoặc gán đủ cả ${SUPPLY_CRATES.length} thùng vật tư vào đúng khoang ISS (${assignedCount}/${SUPPLY_CRATES.length}).`);
+      onFailSubTask?.('D_resources');
+      setResourceFeedback(
+        isEn
+          ? `Drag or assign all ${SUPPLY_CRATES.length} supply crates to their ISS modules (${assignedCount}/${SUPPLY_CRATES.length}).`
+          : `Hãy kéo thả hoặc gán đủ cả ${SUPPLY_CRATES.length} thùng vật tư vào đúng khoang ISS (${assignedCount}/${SUPPLY_CRATES.length}).`
+      );
       return;
     }
 
     const allMatched = SUPPLY_CRATES.every((c) => crateAssignments[c.id] === c.targetModule);
     if (!allMatched) {
       sound.playAlert();
-      setResourceFeedback('Một số vật tư đặt sai khoang nhu cầu! Nhớ đưa Oxy/Lương thực vào Khoang Ở Zvezda, nước tái chế vào Vườn cây Veggie và bộ lọc thí nghiệm vào Destiny.');
+      onFailSubTask?.('D_resources');
+      setResourceFeedback(
+        isEn
+          ? 'Some supplies are in the wrong module! Route O₂/Rations to Zvezda, recycled water to Veggie, and air filters to Destiny.'
+          : 'Một số vật tư đặt sai khoang nhu cầu! Nhớ đưa Oxy/Lương thực vào Khoang Ở Zvezda, nước tái chế vào Vườn cây Veggie và bộ lọc thí nghiệm vào Destiny.'
+      );
       return;
     }
 
     sound.playSuccess();
-    setResourceFeedback('Tất cả nước sạch, oxy và vật tư đã được phân phối chính xác cho phi hành đoàn ISS!');
+    setResourceFeedback(
+      isEn
+        ? 'All water, oxygen, and lab supplies distributed accurately across the ISS crew!'
+        : 'Tất cả nước sạch, oxy và vật tư đã được phân phối chính xác cho phi hành đoàn ISS!'
+    );
     onCompleteSubTask('D_resources');
   };
 
-  const tasks: { key: IssTaskKey; label: string; icon: React.ReactNode }[] = [
-    { key: 'A_power', label: 'A. Sơ đồ cầu dao điện', icon: <Zap className="w-4 h-4" /> },
-    { key: 'B_thermal', label: 'B. Van & Bơm làm mát', icon: <Thermometer className="w-4 h-4" /> },
-    { key: 'C_comms', label: 'C. Mạch & Chảo TDRS', icon: <Radio className="w-4 h-4" /> },
-    { key: 'D_resources', label: 'D. Kéo thả vật tư', icon: <Droplets className="w-4 h-4" /> },
+  const tasks: SubTaskItem<IssTaskKey>[] = [
+    {
+      key: 'A_power',
+      label: isEn ? 'A. Power Breakers' : 'A. Sơ đồ cầu dao điện',
+      icon: <Zap className="w-4 h-4" />,
+      hasError: powerState.status === 'failed',
+    },
+    {
+      key: 'B_thermal',
+      label: isEn ? 'B. Coolant Valves' : 'B. Van & Bơm làm mát',
+      icon: <Thermometer className="w-4 h-4" />,
+      hasError: thermState.status === 'failed',
+    },
+    {
+      key: 'C_comms',
+      label: isEn ? 'C. Ku-Band & TDRS' : 'C. Mạch & Chảo TDRS',
+      icon: <Radio className="w-4 h-4" />,
+      hasError: commsState.status === 'failed',
+    },
+    {
+      key: 'D_resources',
+      label: isEn ? 'D. Supply Crates' : 'D. Kéo thả vật tư',
+      icon: <Droplets className="w-4 h-4" />,
+      hasError: lifeState.status === 'failed',
+    },
   ];
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {tasks.map((t) => {
-          const active = activeTask === t.key;
-          const done = isDone(t.key);
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                setActiveTask(t.key);
-              }}
-              className={`min-h-12 px-3.5 py-2.5 rounded-2xl border-2 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                active
-                  ? 'bg-sky-500 text-white border-sky-600 shadow-sm'
-                  : done
-                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                  : 'bg-white text-sky-950 border-sky-200 hover:border-sky-400'
-              }`}
-            >
-              <span className="flex items-center gap-1.5 truncate">
-                {t.icon}
-                <span className="truncate">{t.label}</span>
-              </span>
-              {done && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-            </button>
-          );
-        })}
-      </div>
+      <SubTaskStatusBar
+        tasks={tasks}
+        activeTask={activeTask}
+        completedTasks={session.completedSubTasks}
+        failedTasks={session.failedSubTasks}
+        lang={lang}
+        onSelect={setActiveTask}
+      />
 
       {/* TASK A: INTERACTIVE BREAKER PANEL & POWER BUS */}
       {activeTask === 'A_power' && (
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-sky-950 font-display">
-              Nhiệm vụ A: Đóng ngắt cầu dao & Phân phối điện trạm ISS
+              {isEn
+                ? 'Task A: Trip Breakers & Balance ISS Power Distribution'
+                : 'Nhiệm vụ A: Đóng ngắt cầu dao & Phân phối điện trạm ISS'}
             </h2>
             <span
               className={`text-xs font-extrabold tabular-nums flex items-center gap-1 ${
@@ -277,22 +380,25 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
             >
               <BatteryCharging className="w-4 h-4" />
               <span>
-                Tải tiêu thụ: {totalPowerAllocated}% / Nguồn cung tối đa: {eclipseBudgetPct}%
+                {isEn
+                  ? `Load: ${totalPowerAllocated}% / Max Supply: ${eclipseBudgetPct}%`
+                  : `Tải tiêu thụ: ${totalPowerAllocated}% / Nguồn cung tối đa: ${eclipseBudgetPct}%`}
               </span>
             </span>
           </div>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="iss_power"
-            actionLabel="Mảng pin Mặt Trời & Pin lưu trữ"
+            actionLabel={isEn ? 'Solar Arrays & Battery Pack' : 'Mảng pin Mặt Trời & Pin lưu trữ'}
             onOpenRepair={onOpenRepair}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               {
-                label: 'Hỗ trợ sự sống & Oxy (Tối thiểu 45%)',
+                label: isEn ? 'Life Support & O₂ (Min 45%)' : 'Hỗ trợ sự sống & Oxy (Tối thiểu 45%)',
                 on: lifeOn,
                 toggle: () => setLifeOn((v) => !v),
                 val: allocLife,
@@ -301,7 +407,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                 max: 70,
               },
               {
-                label: 'Điều hòa nhiệt Amoniac (Tối thiểu 20%)',
+                label: isEn ? 'Ammonia Thermal Loop (Min 20%)' : 'Điều hòa nhiệt Amoniac (Tối thiểu 20%)',
                 on: thermOn,
                 toggle: () => setThermOn((v) => !v),
                 val: allocThermal,
@@ -310,7 +416,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                 max: 45,
               },
               {
-                label: 'Giá thí nghiệm Columbus',
+                label: isEn ? 'Columbus Experiment Rack' : 'Giá thí nghiệm Columbus',
                 on: labOn,
                 toggle: () => setLabOn((v) => !v),
                 val: allocScience,
@@ -319,7 +425,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                 max: 45,
               },
               {
-                label: 'Đèn chiếu sáng & Thiết bị phụ',
+                label: isEn ? 'Cabin Lighting & Aux Loads' : 'Đèn chiếu sáng & Thiết bị phụ',
                 on: auxOn,
                 toggle: () => setAuxOn((v) => !v),
                 val: allocAux,
@@ -347,7 +453,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                     }`}
                   >
                     <Power className="w-3.5 h-3.5" />
-                    <span>{bus.on ? 'ĐANG BẬT' : 'ĐÃ NGẮT'}</span>
+                    <span>{bus.on ? (isEn ? 'ON' : 'ĐANG BẬT') : isEn ? 'OFF' : 'ĐÃ NGẮT'}</span>
                   </button>
                 </div>
 
@@ -380,7 +486,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
             onClick={handleConfirmPower}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm cursor-pointer"
           >
-            Áp dụng cấu hình điện ISS
+            {isEn ? 'Apply ISS Power Configuration' : 'Áp dụng cấu hình điện ISS'}
           </button>
         </div>
       )}
@@ -389,23 +495,26 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
       {activeTask === 'B_thermal' && (
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <h2 className="text-lg font-bold text-sky-950 font-display">
-            Nhiệm vụ B: Điều chỉnh van tản nhiệt Amoniac & Theo dõi hạ nhiệt trực tiếp
+            {isEn
+              ? 'Task B: Operate Ammonia Coolant Valves & Monitor Live Cooling'
+              : 'Nhiệm vụ B: Điều chỉnh van tản nhiệt Amoniac & Theo dõi hạ nhiệt trực tiếp'}
           </h2>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="iss_thermal"
-            actionLabel="Hệ thống điều hòa nhiệt Amoniac"
+            actionLabel={isEn ? 'Ammonia Thermal Control System' : 'Hệ thống điều hòa nhiệt Amoniac'}
             onOpenRepair={onOpenRepair}
           />
 
           {/* Module Temperatures */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {[
-              { name: 'Khoang Destiny', temp: `${destinyTempC}°C`, hot: destinyTempC > 26 },
-              { name: 'Khoang Harmony', temp: `${Math.max(21, +(destinyTempC - 6).toFixed(1))}°C`, hot: false },
-              { name: 'Khoang Columbus', temp: '21.8°C', hot: false },
-              { name: 'Khoang Zvezda', temp: '22.4°C', hot: false },
+              { name: isEn ? 'Destiny Lab' : 'Khoang Destiny', temp: `${destinyTempC}°C`, hot: destinyTempC > 26 },
+              { name: isEn ? 'Harmony Node' : 'Khoang Harmony', temp: `${Math.max(21, +(destinyTempC - 6).toFixed(1))}°C`, hot: false },
+              { name: isEn ? 'Columbus Lab' : 'Khoang Columbus', temp: '21.8°C', hot: false },
+              { name: isEn ? 'Zvezda Module' : 'Khoang Zvezda', temp: '22.4°C', hot: false },
             ].map((mod) => (
               <div
                 key={mod.name}
@@ -434,9 +543,17 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                 valveLoopA ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 border-slate-300'
               }`}
             >
-              <div className="text-xs font-extrabold text-sky-950">Van Vòng A (Có cặn tắc)</div>
+              <div className="text-xs font-extrabold text-sky-950">
+                {isEn ? 'Loop A Valve (Clogged)' : 'Van Vòng A (Có cặn tắc)'}
+              </div>
               <div className="text-sm font-black mt-1 text-rose-700">
-                {valveLoopA ? 'ĐANG MỞ (Nghẽn áp suất)' : 'ĐÃ KHÓA CÁCH LY ✓'}
+                {valveLoopA
+                  ? isEn
+                    ? 'OPEN (Pressure Jam)'
+                    : 'ĐANG MỞ (Nghẽn áp suất)'
+                  : isEn
+                  ? 'ISOLATED ✓'
+                  : 'ĐÃ KHÓA CÁCH LY ✓'}
               </div>
             </button>
 
@@ -451,9 +568,17 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                 valveLoopB ? 'bg-emerald-50 border-emerald-400' : 'bg-white border-sky-200'
               }`}
             >
-              <div className="text-xs font-extrabold text-sky-950">Van Vòng B (Dự phòng)</div>
+              <div className="text-xs font-extrabold text-sky-950">
+                {isEn ? 'Loop B Valve (Backup)' : 'Van Vòng B (Dự phòng)'}
+              </div>
               <div className={`text-sm font-black mt-1 ${valveLoopB ? 'text-emerald-700' : 'text-slate-600'}`}>
-                {valveLoopB ? 'ĐANG MỞ THÔNG SUỐT ✓' : 'ĐANG ĐÓNG (Chạm để mở)'}
+                {valveLoopB
+                  ? isEn
+                    ? 'OPEN & FLOWING ✓'
+                    : 'ĐANG MỞ THÔNG SUỐT ✓'
+                  : isEn
+                  ? 'CLOSED (Tap to open)'
+                  : 'ĐANG ĐÓNG (Chạm để mở)'}
               </div>
             </button>
 
@@ -468,17 +593,31 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                 pumpOn ? 'bg-sky-50 border-sky-500' : 'bg-white border-sky-200'
               }`}
             >
-              <div className="text-xs font-extrabold text-sky-950">Bơm Tuần Hoàn Amoniac</div>
+              <div className="text-xs font-extrabold text-sky-950">
+                {isEn ? 'Ammonia Coolant Pump' : 'Bơm Tuần Hoàn Amoniac'}
+              </div>
               <div className={`text-sm font-black mt-1 ${pumpOn ? 'text-sky-700' : 'text-slate-600'}`}>
-                {pumpOn ? 'ĐANG BƠM CHỦ ĐỘNG ✓' : 'ĐANG TẮT (Chạm để bật)'}
+                {pumpOn
+                  ? isEn
+                    ? 'PUMPING ACTIVE ✓'
+                    : 'ĐANG BƠM CHỦ ĐỘNG ✓'
+                  : isEn
+                  ? 'OFF (Tap to start)'
+                  : 'ĐANG TẮT (Chạm để bật)'}
               </div>
             </button>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-1.5">
             <div className="flex justify-between text-xs font-extrabold text-sky-950">
-              <span>Lưu lượng tản nhiệt Amoniac (Mục tiêu ≥ 65 L/phút)</span>
-              <span className="tabular-nums text-sky-700">{flowRateLpm} L/phút</span>
+              <span>
+                {isEn
+                  ? 'Ammonia Coolant Flow Rate (Target ≥ 65 L/min)'
+                  : 'Lưu lượng tản nhiệt Amoniac (Mục tiêu ≥ 65 L/phút)'}
+              </span>
+              <span className="tabular-nums text-sky-700">
+                {flowRateLpm} {isEn ? 'L/min' : 'L/phút'}
+              </span>
             </div>
             <input
               type="range"
@@ -503,7 +642,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
             onClick={handleVerifyThermal}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer"
           >
-            Xác nhận nhiệt độ đã về mức an toàn
+            {isEn ? 'Verify Nominal Temperature' : 'Xác nhận nhiệt độ đã về mức an toàn'}
           </button>
         </div>
       )}
@@ -512,30 +651,44 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
       {activeTask === 'C_comms' && (
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <h2 className="text-lg font-bold text-sky-950 font-display">
-            Nhiệm vụ C: Nối mạch Ku-Band & Quay chảo khóa vệ tinh TDRS
+            {isEn
+              ? 'Task C: Wire Ku-Band Link & Lock Antenna onto TDRS Satellite'
+              : 'Nhiệm vụ C: Nối mạch Ku-Band & Quay chảo khóa vệ tinh TDRS'}
           </h2>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="iss_comms"
-            actionLabel="Hệ thống liên lạc Ku/S-Band"
+            actionLabel={isEn ? 'Ku/S-Band Comms System' : 'Hệ thống liên lạc Ku/S-Band'}
             onOpenRepair={onOpenRepair}
           />
 
           <CircuitWiringBoard
-            title="Bước 1: Đấu nối mạch truyền tin trạm ISS"
-            instruction="Nối Bus nguồn 120V DC, Kênh dữ liệu điều khiển và Chân chảo phát Ku-Band."
+            lang={lang}
+            title={isEn ? 'Step 1: Wire ISS telemetry circuit' : 'Bước 1: Đấu nối mạch truyền tin trạm ISS'}
+            instruction={
+              isEn
+                ? 'Connect 120V DC Bus and Command Data lines to matching Ku-Band terminals.'
+                : 'Nối Bus nguồn 120V DC, Kênh dữ liệu điều khiển và Chân chảo phát Ku-Band.'
+            }
             disabled={commsState.status === 'failed'}
             leftNodes={[
-              { id: 'bus', label: 'Bus điện ISS 120V', color: '#f59e0b', sublabel: 'Nguồn trạm' },
-              { id: 'voice', label: 'Tín hiệu điều khiển', color: '#0284c7', sublabel: 'Âm thanh & Dữ liệu' },
+              { id: 'bus', label: isEn ? '120V ISS Bus' : 'Bus điện ISS 120V', color: '#f59e0b', sublabel: isEn ? 'Station Power' : 'Nguồn trạm' },
+              { id: 'voice', label: isEn ? 'Command Telemetry' : 'Tín hiệu điều khiển', color: '#0284c7', sublabel: isEn ? 'Voice & Data' : 'Âm thanh & Dữ liệu' },
             ]}
             rightNodes={[
-              { id: 'ku_data', label: 'Bộ phát Ku-Band', color: '#0284c7', sublabel: 'Truyền dữ liệu cao' },
-              { id: 'ku_pwr', label: 'Nguồn bộ khuếch đại', color: '#f59e0b', sublabel: '120V Input' },
+              { id: 'ku_data', label: isEn ? 'Ku-Band Transceiver' : 'Bộ phát Ku-Band', color: '#0284c7', sublabel: isEn ? 'High-Rate Data' : 'Truyền dữ liệu cao' },
+              { id: 'ku_pwr', label: isEn ? 'Amplifier Power' : 'Nguồn bộ khuếch đại', color: '#f59e0b', sublabel: '120V Input' },
             ]}
             expectedConnections={[
-              { fromId: 'bus', toId: 'ku_pwr', errorHint: 'Bus điện 120V phải nối vào Nguồn bộ khuếch đại!' },
+              {
+                fromId: 'bus',
+                toId: 'ku_pwr',
+                errorHint: isEn
+                  ? '120V Bus must connect to Amplifier Power!'
+                  : 'Bus điện 120V phải nối vào Nguồn bộ khuếch đại!',
+              },
               { fromId: 'voice', toId: 'ku_data' },
             ]}
             onSuccess={() => setKuWired(true)}
@@ -543,9 +696,20 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
 
           <div className="p-4 rounded-2xl bg-sky-50 border-2 border-sky-200 space-y-2.5">
             <div className="flex flex-wrap justify-between text-xs font-extrabold text-sky-950">
-              <span>Bước 2: Quay góc chảo bám vệ tinh TDRS quỹ đạo địa tĩnh (85°–105°)</span>
+              <span>
+                {isEn
+                  ? 'Step 2: Aim gimbal dish toward geostationary TDRS relay (85°–105°)'
+                  : 'Bước 2: Quay góc chảo bám vệ tinh TDRS quỹ đạo địa tĩnh (85°–105°)'}
+              </span>
               <span className={`tabular-nums ${tdrsLocked ? 'text-emerald-700' : 'text-amber-700'}`}>
-                Góc chảo: {tdrsAimDeg}° {tdrsLocked ? '· BẮT SÓNG TDRS ✓' : '· Lệch hướng'}
+                {isEn ? `Dish: ${tdrsAimDeg}°` : `Góc chảo: ${tdrsAimDeg}°`}{' '}
+                {tdrsLocked
+                  ? isEn
+                    ? '· TDRS LOCKED ✓'
+                    : '· BẮT SÓNG TDRS ✓'
+                  : isEn
+                  ? '· Off-Target'
+                  : '· Lệch hướng'}
               </span>
             </div>
             <input
@@ -571,7 +735,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
             onClick={handleLockHouston}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer"
           >
-            Khóa kết nối Houston qua TDRS
+            {isEn ? 'Lock Houston Link via TDRS' : 'Khóa kết nối Houston qua TDRS'}
           </button>
         </div>
       )}
@@ -581,17 +745,22 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <div>
             <h2 className="text-lg font-bold text-sky-950 font-display">
-              Nhiệm vụ D: Kéo thả vật tư thiết yếu vào từng khoang trạm ISS
+              {isEn
+                ? 'Task D: Route Essential Supplies into ISS Modules'
+                : 'Nhiệm vụ D: Kéo thả vật tư thiết yếu vào từng khoang trạm ISS'}
             </h2>
             <p className="text-xs text-sky-800/85 font-medium">
-              Kéo (hoặc chạm chọn thùng rồi chạm vào khoang) để phân bổ nước, oxy và thiết bị đúng nơi cần.
+              {isEn
+                ? 'Drag (or tap a crate then tap a module) to deliver water, oxygen, and hardware where needed.'
+                : 'Kéo (hoặc chạm chọn thùng rồi chạm vào khoang) để phân bổ nước, oxy và thiết bị đúng nơi cần.'}
             </p>
           </div>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="iss_lifesupport"
-            actionLabel="Hệ hỗ trợ sự sống & tài nguyên"
+            actionLabel={isEn ? 'Life Support & Resources' : 'Hệ hỗ trợ sự sống & tài nguyên'}
             onOpenRepair={onOpenRepair}
           />
 
@@ -623,11 +792,13 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                   <div className="flex items-center justify-between gap-1 text-xs font-extrabold text-sky-700">
                     <span className="flex items-center gap-1">
                       <Package className="w-3.5 h-3.5" />
-                      <span>{crate.kind}</span>
+                      <span>{isEn ? crate.kindEn : crate.kind}</span>
                     </span>
                     {assignedTo && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
                   </div>
-                  <div className="text-xs font-extrabold text-sky-950">{crate.label}</div>
+                  <div className="text-xs font-extrabold text-sky-950">
+                    {isEn ? crate.labelEn : crate.label}
+                  </div>
                 </div>
               );
             })}
@@ -639,18 +810,24 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
               [
                 {
                   id: 'zvezda',
-                  title: 'Khoang Ở Zvezda',
-                  need: 'Nhu cầu: Nước uống, Oxy & Lương thực phi hành gia',
+                  title: isEn ? 'Zvezda Living Quarters' : 'Khoang Ở Zvezda',
+                  need: isEn
+                    ? 'Needs: Drinking water, O₂ & crew rations'
+                    : 'Nhu cầu: Nước uống, Oxy & Lương thực phi hành gia',
                 },
                 {
                   id: 'destiny',
-                  title: 'Phòng Thí Nghiệm Destiny',
-                  need: 'Nhu cầu: Bộ lọc không khí & Mẫu thí nghiệm',
+                  title: isEn ? 'Destiny Lab Module' : 'Phòng Thí Nghiệm Destiny',
+                  need: isEn
+                    ? 'Needs: Air filters & lab samples'
+                    : 'Nhu cầu: Bộ lọc không khí & Mẫu thí nghiệm',
                 },
                 {
                   id: 'veggie',
-                  title: 'Vườn Cây Veggie',
-                  need: 'Nhu cầu: Bình nước tái chế trồng rau xanh',
+                  title: isEn ? 'Veggie Plant Habitat' : 'Vườn Cây Veggie',
+                  need: isEn
+                    ? 'Needs: Recycled water for orbital crops'
+                    : 'Nhu cầu: Bình nước tái chế trồng rau xanh',
                 },
               ] as const
             ).map((mod) => {
@@ -680,7 +857,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
                         key={c.id}
                         className="px-2.5 py-1.5 rounded-xl bg-white border border-emerald-300 text-xs font-bold text-emerald-900"
                       >
-                        ✓ {c.label}
+                        ✓ {isEn ? c.labelEn : c.label}
                       </div>
                     ))}
                   </div>
@@ -701,7 +878,7 @@ export const IssSimulator: React.FC<IssSimulatorProps> = ({
             onClick={handleConfirmResources}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer"
           >
-            Chốt phân bổ vật tư trên ISS
+            {isEn ? 'Confirm ISS Supply Distribution' : 'Chốt phân bổ vật tư trên ISS'}
           </button>
         </div>
       )}

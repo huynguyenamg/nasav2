@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   EquipmentSubsystemId,
+  Language,
   MissionSessionState,
 } from '../../types/game';
 import {
@@ -9,6 +10,7 @@ import {
   triggerStressIncident,
 } from '../../data/equipmentSystems';
 import { SubsystemLockNotice } from './SubsystemLockNotice';
+import { SubTaskStatusBar, SubTaskItem } from './SubTaskStatusBar';
 import { CircuitWiringBoard } from '../interactive/CircuitWiringBoard';
 import { VirtualJoystick } from '../interactive/VirtualJoystick';
 import { sound } from '../../services/sound';
@@ -28,10 +30,16 @@ import {
 } from 'lucide-react';
 
 interface PerseveranceSimulatorProps {
+  lang: Language;
   session: MissionSessionState;
   onUpdateSession: (session: MissionSessionState) => void;
   onOpenRepair: (targetSubsystem?: EquipmentSubsystemId) => void;
-  onCompleteSubTask: (taskId: string, extras?: { photos?: number; samples?: number }) => void;
+  onCompleteSubTask: (
+    taskId: string,
+    extras?: { photos?: number; samples?: number },
+    sessionPatch?: Partial<MissionSessionState>
+  ) => void;
+  onFailSubTask?: (taskId: string, sessionPatch?: Partial<MissionSessionState>) => void;
 }
 
 type RoverTaskKey = 'A_mobility' | 'B_terrain' | 'C_sample' | 'D_comms';
@@ -39,9 +47,11 @@ type RoverTaskKey = 'A_mobility' | 'B_terrain' | 'C_sample' | 'D_comms';
 interface SurveyZone {
   id: 'sand' | 'rock' | 'safe';
   label: string;
+  labelEn: string;
   xPct: number;
   yPct: number;
   clue: string;
+  clueEn: string;
   isHazard: boolean;
 }
 
@@ -49,35 +59,43 @@ const SURVEY_ZONES: SurveyZone[] = [
   {
     id: 'sand',
     label: 'Vùng cát mịn',
+    labelEn: 'Fine Sand Dune',
     xPct: 32,
     yPct: 68,
     clue: 'Cảnh báo: Lớp cát mịn dày dễ làm sa lầy bánh xe.',
+    clueEn: 'Warning: Deep loose sand can easily bog down rover wheels.',
     isHazard: true,
   },
   {
     id: 'rock',
     label: 'Bãi đá sắc 48cm',
+    labelEn: 'Sharp Rocks (48cm)',
     xPct: 58,
     yPct: 32,
     clue: 'Cảnh báo: Đá nhọn vượt quá khoảng sáng gầm 40cm của xe.',
+    clueEn: 'Warning: Jagged boulders exceed the rover 40cm ground clearance.',
     isHazard: true,
   },
   {
     id: 'safe',
     label: 'Sườn đất nén phẳng',
+    labelEn: 'Packed Flat Slope',
     xPct: 78,
     yPct: 65,
     clue: 'An toàn: Nền đá trầm tích phẳng, độ dốc chỉ 4°.',
+    clueEn: 'Safe: Compact sedimentary bedrock with only a 4° grade.',
     isHazard: false,
   },
 ];
 
 export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
+  lang,
   session,
-  onUpdateSession,
   onOpenRepair,
   onCompleteSubTask,
+  onFailSubTask,
 }) => {
+  const isEn = lang === 'en';
   const [activeTask, setActiveTask] = useState<RoverTaskKey>('A_mobility');
 
   // Task A: Rover physics & terrain
@@ -86,10 +104,8 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
   const [roverAngle, setRoverAngle] = useState(0);
   const [batteryPct, setBatteryPct] = useState(100);
   const [stabilityPct, setStabilityPct] = useState(98);
-  const [terrainTypeLabel, setTerrainTypeLabel] = useState('Nền đất cứng Jezero');
-  const [driveFeedback, setDriveFeedback] = useState(
-    'Kéo cần joystick ảo hoặc bấm mũi tên/WASD để lái Perseverance tới Cờ mục tiêu.'
-  );
+  const [terrainZone, setTerrainZone] = useState<'hard' | 'sand' | 'slope'>('hard');
+  const [driveFeedback, setDriveFeedback] = useState<string | null>(null);
   const lastJoyMoveRef = useRef(0);
 
   // Task B: Draggable Navcam viewfinder + Hazard tagging
@@ -113,14 +129,38 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
   const [dishAngle, setDishAngle] = useState(75);
   const [commsFeedback, setCommsFeedback] = useState<string | null>(null);
 
-  const mobState = getEffectiveSubsystemState(session, 'rover_mobility');
-  const camState = getEffectiveSubsystemState(session, 'rover_camera');
-  const armState = getEffectiveSubsystemState(session, 'rover_arm');
-  const commsState = getEffectiveSubsystemState(session, 'rover_comms');
+  const mobState = getEffectiveSubsystemState(session, 'rover_mobility', lang);
+  const camState = getEffectiveSubsystemState(session, 'rover_camera', lang);
+  const armState = getEffectiveSubsystemState(session, 'rover_arm', lang);
+  const commsState = getEffectiveSubsystemState(session, 'rover_comms', lang);
 
   const mobPart = getPartById(session.subsystems.rover_mobility?.partId || '');
   const armPart = getPartById(session.subsystems.rover_arm?.partId || '');
   const isDone = (k: RoverTaskKey) => session.completedSubTasks.includes(k);
+
+  useEffect(() => {
+    setDriveFeedback(null);
+    setTerrainFeedback(null);
+    setSampleFeedback(null);
+    setCommsFeedback(null);
+  }, [lang]);
+
+  const terrainTypeLabel =
+    terrainZone === 'sand'
+      ? isEn
+        ? 'Fine Sand Trap (-45% Speed · High Power)'
+        : 'Hố cát mịn (Tốc độ -45% · Hao pin)'
+      : terrainZone === 'slope'
+      ? isEn
+        ? '22° Rock Slope (Lower Stability)'
+        : 'Dốc đá 22° (Giảm ổn định)'
+      : isEn
+      ? 'Hard Jezero Bedrock'
+      : 'Nền đất cứng Jezero';
+
+  const defaultDrivePrompt = isEn
+    ? 'Drag the virtual joystick or press Arrow keys/WASD to drive Perseverance to the Target Flag.'
+    : 'Kéo cần joystick ảo hoặc bấm mũi tên/WASD để lái Perseverance tới Cờ mục tiêu.';
 
   // Animate MRO orbiter arc in Task D
   useEffect(() => {
@@ -137,13 +177,21 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
   const moveRover = (dx: number, dy: number, facingDeg: number) => {
     if (mobState.status === 'failed') {
       sound.playAlert();
-      setDriveFeedback('Bánh xe hoặc nguồn điện đang hỏng! Hãy sửa trước khi di chuyển.');
+      setDriveFeedback(
+        isEn
+          ? 'Wheels or power subsystem failed! Open Repair Bay before driving.'
+          : 'Bánh xe hoặc nguồn điện đang hỏng! Hãy sửa trước khi di chuyển.'
+      );
       return;
     }
 
     if (batteryPct <= 8) {
       sound.playAlert();
-      setDriveFeedback('Pin yếu! Hãy tạm dừng vài giây để hệ thống sạc bù.');
+      setDriveFeedback(
+        isEn
+          ? 'Low battery! Pause briefly to let the system trickle-charge.'
+          : 'Pin yếu! Hãy tạm dừng vài giây để hệ thống sạc bù.'
+      );
       return;
     }
 
@@ -163,34 +211,45 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
     setRoverAngle(facingDeg);
     setBatteryPct((b) => Math.max(5, +(b - (inSand ? 2.4 : inSlope ? 1.8 : 1.0)).toFixed(1)));
     setStabilityPct(inSlope ? 74 : inSand ? 82 : 98);
-    setTerrainTypeLabel(
-      inSand
-        ? 'Hố cát mịn (Tốc độ -45% · Hao pin)'
-        : inSlope
-        ? 'Dốc đá 22° (Giảm ổn định)'
-        : 'Nền đất cứng Jezero'
-    );
+    setTerrainZone(inSand ? 'sand' : inSlope ? 'slope' : 'hard');
 
     if (inSand && mobPart?.tier === 'economy' && session.difficulty >= 2 && !isDone('A_mobility')) {
       const stressed = triggerStressIncident(
         session,
         'rover_mobility',
         'Sa lầy trên cát do bánh Tiết kiệm',
-        'Bánh nhôm mỏng mất độ bám khi đi xuyên vùng cát mịn, cần vào Sửa chữa kiểm tra hoặc thay bánh.'
+        'Bánh nhôm mỏng mất độ bám khi đi xuyên vùng cát mịn, cần vào Sửa chữa kiểm tra hoặc thay bánh.',
+        'Stuck in sand due to Economy-tier wheels',
+        'Thin aluminum wheels lost traction in deep fine sand; open Repair Bay to inspect or upgrade.'
       );
-      onUpdateSession(stressed);
+      onFailSubTask?.('A_mobility', {
+        subsystems: stressed.subsystems,
+        incidentsTriggered: stressed.incidentsTriggered,
+      });
       sound.playAlert();
-      setDriveFeedback('Cảnh báo: Xe bị sa lầy trong hố cát! Hãy né hố cát hoặc nâng cấp bánh xe.');
+      setDriveFeedback(
+        isEn
+          ? 'Warning: Rover bogged down in the sand trap! Detour around sand or upgrade your wheels.'
+          : 'Cảnh báo: Xe bị sa lầy trong hố cát! Hãy né hố cát hoặc nâng cấp bánh xe.'
+      );
       return;
     }
 
     const reachedGoal = Math.hypot(nextX - 420, nextY - 82) <= 42;
     if (reachedGoal && mobState.status === 'ok' && !isDone('A_mobility')) {
       sound.playSuccess();
-      setDriveFeedback('Tuyệt vời! Robot đã vượt địa hình và tới đúng Cờ mục tiêu Jezero!');
+      setDriveFeedback(
+        isEn
+          ? 'Well done! Perseverance navigated the terrain and reached the Jezero Target Flag!'
+          : 'Tuyệt vời! Robot đã vượt địa hình và tới đúng Cờ mục tiêu Jezero!'
+      );
       onCompleteSubTask('A_mobility');
     } else if (reachedGoal && mobState.status === 'degraded') {
-      setDriveFeedback('Đã tới Cờ mục tiêu, nhưng bánh xe đang suy giảm — nên vào Sửa chữa để đạt điểm cao!');
+      setDriveFeedback(
+        isEn
+          ? 'Reached Target Flag, but mobility wheels are degraded — visit Repair Bay for full points!'
+          : 'Đã tới Cờ mục tiêu, nhưng bánh xe đang suy giảm — nên vào Sửa chữa để đạt điểm cao!'
+      );
     }
   };
 
@@ -233,13 +292,19 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
     if (camState.status === 'failed') return;
     sound.playCamera();
     if (!zoneInsideFrame) {
-      setTerrainFeedback('Khung ngắm chưa phủ lên điểm khảo sát nào! Hãy kéo khung vào các vòng tròn trên bản đồ.');
+      setTerrainFeedback(
+        isEn
+          ? 'Viewfinder is not over any survey point! Drag the frame onto a circle on the map.'
+          : 'Khung ngắm chưa phủ lên điểm khảo sát nào! Hãy kéo khung vào các vòng tròn trên bản đồ.'
+      );
       return;
     }
     if (!scannedZones.includes(zoneInsideFrame.id)) {
       setScannedZones((prev) => [...prev, zoneInsideFrame.id]);
     }
-    setTerrainFeedback(`${zoneInsideFrame.label}: ${zoneInsideFrame.clue}`);
+    const zLabel = isEn ? zoneInsideFrame.labelEn : zoneInsideFrame.label;
+    const zClue = isEn ? zoneInsideFrame.clueEn : zoneInsideFrame.clue;
+    setTerrainFeedback(`${zLabel}: ${zClue}`);
   };
 
   const handleToggleHazardTag = (zoneId: string) => {
@@ -254,7 +319,12 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
     if (camState.status === 'failed') return;
     if (scannedZones.length < 3) {
       sound.playAlert();
-      setTerrainFeedback(`Hãy kéo khung quét và chụp ảnh đủ cả 3 vùng trên bản đồ (${scannedZones.length}/3)!`);
+      onFailSubTask?.('B_terrain');
+      setTerrainFeedback(
+        isEn
+          ? `Drag the frame to scan and image all 3 zones on the map (${scannedZones.length}/3)!`
+          : `Hãy kéo khung quét và chụp ảnh đủ cả 3 vùng trên bản đồ (${scannedZones.length}/3)!`
+      );
       return;
     }
     const correctTags =
@@ -262,19 +332,27 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
       taggedHazards.includes('rock') &&
       !taggedHazards.includes('safe');
 
-    onUpdateSession({
-      ...session,
+    const diagPatch = {
       diagnosisAttempts: session.diagnosisAttempts + 1,
       diagnosisCorrect: session.diagnosisCorrect + (correctTags ? 1 : 0),
-    });
+    };
 
     if (correctTags) {
       sound.playSuccess();
-      setTerrainFeedback('Đã đánh dấu chính xác 2 chướng ngại vật (Cát mịn & Đá nhọn) và mở tuyến đường an toàn!');
-      onCompleteSubTask('B_terrain', { photos: 3 });
+      setTerrainFeedback(
+        isEn
+          ? 'Accurately tagged both hazards (Fine Sand Dune & Sharp Rocks) and cleared a safe route!'
+          : 'Đã đánh dấu chính xác 2 chướng ngại vật (Cát mịn & Đá nhọn) và mở tuyến đường an toàn!'
+      );
+      onCompleteSubTask('B_terrain', { photos: 3 }, diagPatch);
     } else {
       sound.playAlert();
-      setTerrainFeedback('Đánh dấu chưa chuẩn! Chỉ gắn cờ cảnh báo cho Cát mịn và Bãi đá sắc 48cm, giữ trống Sườn đất phẳng.');
+      onFailSubTask?.('B_terrain', diagPatch);
+      setTerrainFeedback(
+        isEn
+          ? 'Incorrect tags! Only flag Fine Sand Dune and Sharp Rocks (48cm); leave Packed Flat Slope unflagged.'
+          : 'Đánh dấu chưa chuẩn! Chỉ gắn cờ cảnh báo cho Cát mịn và Bãi đá sắc 48cm, giữ trống Sườn đất phẳng.'
+      );
     }
   };
 
@@ -286,15 +364,25 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
 
     if (!reachOk || !depthOk) {
       sound.playAlert();
-      setSampleFeedback('Mũi khoan chưa chạm đúng lõi đá mục tiêu! Chỉnh Vươn tay (68–86%) và Độ sâu (58–78%).');
+      onFailSubTask?.('C_sample');
+      setSampleFeedback(
+        isEn
+          ? 'Drill bit is off target! Adjust Arm Reach (68–86%) and Drill Depth (58–78%).'
+          : 'Mũi khoan chưa chạm đúng lõi đá mục tiêu! Chỉnh Vươn tay (68–86%) và Độ sâu (58–78%).'
+      );
       return;
     }
 
     if (!rpmOk) {
       sound.playAlert();
+      onFailSubTask?.('C_sample');
       setSampleFeedback(
         drillRpm > 80
-          ? 'Tốc độ quay quá cao gây nóng và rung mũi khoan! Giảm RPM về vùng 45–80%.'
+          ? isEn
+            ? 'RPM too high — overheating and vibrating drill bit! Lower RPM to 45–80%.'
+            : 'Tốc độ quay quá cao gây nóng và rung mũi khoan! Giảm RPM về vùng 45–80%.'
+          : isEn
+          ? 'Torque too weak to penetrate rock crust! Raise RPM to 45–80%.'
           : 'Lực khoan quá yếu chưa xuyên được vỏ đá! Tăng RPM lên 45–80%.'
       );
       return;
@@ -305,23 +393,40 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
         session,
         'rover_arm',
         'Rung đầu khoan khi gặp đá Bazan cứng',
-        'Cánh tay Tiết kiệm bị rung lắc khi khoan đá cứng, cần vào Sửa chữa để hiệu chỉnh.'
+        'Cánh tay Tiết kiệm bị rung lắc khi khoan đá cứng, cần vào Sửa chữa để hiệu chỉnh.',
+        'Drill head vibration on hard basalt',
+        'Economy-tier robotic arm rattled against dense basalt; open Repair Bay to recalibrate.'
       );
-      onUpdateSession(stressed);
+      onFailSubTask?.('C_sample', {
+        subsystems: stressed.subsystems,
+        incidentsTriggered: stressed.incidentsTriggered,
+      });
       sound.playAlert();
-      setSampleFeedback('Đầu khoan Tiết kiệm bị kẹt nhẹ trước đá cứng! Hãy vào Sửa chữa để xử lý.');
+      setSampleFeedback(
+        isEn
+          ? 'Economy drill head jammed slightly on hard rock! Open Repair Bay to service it.'
+          : 'Đầu khoan Tiết kiệm bị kẹt nhẹ trước đá cứng! Hãy vào Sửa chữa để xử lý.'
+      );
       return;
     }
 
     sound.playRepairTool();
     setCoreDrilled(true);
-    setSampleFeedback('Đã khoan thành công lõi đá đất sét cổ! Bấm "Niêm phong ống mẫu" để cất giữ.');
+    setSampleFeedback(
+      isEn
+        ? 'Successfully drilled ancient clay rock core! Click "Seal Sample Tube" to store.'
+        : 'Đã khoan thành công lõi đá đất sét cổ! Bấm "Niêm phong ống mẫu" để cất giữ.'
+    );
   };
 
   const handleSealTube = () => {
     if (!coreDrilled || armState.status === 'failed') return;
     sound.playSuccess();
-    setSampleFeedback('Ống mẫu #07 đã được niêm phong kín vào khoang lưu trữ của Perseverance!');
+    setSampleFeedback(
+      isEn
+        ? 'Sample Tube #07 is hermetically sealed in Perseverance storage bay!'
+        : 'Ống mẫu #07 đã được niêm phong kín vào khoang lưu trữ của Perseverance!'
+    );
     onCompleteSubTask('C_sample', { samples: 1 });
   };
 
@@ -331,61 +436,71 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
     if (commsState.status === 'failed') return;
     if (!uhfWired) {
       sound.playAlert();
-      setCommsFeedback('Chưa nối xong mạch điện ăng-ten UHF ở bước 1!');
+      onFailSubTask?.('D_comms');
+      setCommsFeedback(
+        isEn
+          ? 'UHF antenna wiring in Step 1 is not completed yet!'
+          : 'Chưa nối xong mạch điện ăng-ten UHF ở bước 1!'
+      );
       return;
     }
     if (!mroSignalAligned) {
       sound.playAlert();
+      onFailSubTask?.('D_comms');
       setCommsFeedback(
-        `Chảo ăng-ten (${dishAngle}°) chưa bắt kịp vệ tinh MRO (đang ở ${Math.round(mroAngle)}°)! Hãy kéo thanh góc bám theo MRO.`
+        isEn
+          ? `Dish angle (${dishAngle}°) missed the MRO orbiter (at ${Math.round(mroAngle)}°)! Track MRO with the slider.`
+          : `Chảo ăng-ten (${dishAngle}°) chưa bắt kịp vệ tinh MRO (đang ở ${Math.round(mroAngle)}°)! Hãy kéo thanh góc bám theo MRO.`
       );
       return;
     }
 
     sound.playSuccess();
-    setCommsFeedback('Tín hiệu khóa MRO đạt 96%! Toàn bộ dữ liệu ảnh và mẫu đá đã truyền về Trái Đất.');
+    setCommsFeedback(
+      isEn
+        ? 'MRO lock at 96% signal! All images and rock sample telemetry transmitted to Earth.'
+        : 'Tín hiệu khóa MRO đạt 96%! Toàn bộ dữ liệu ảnh và mẫu đá đã truyền về Trái Đất.'
+    );
     onCompleteSubTask('D_comms');
   };
 
-  const tasks: { key: RoverTaskKey; label: string; icon: React.ReactNode }[] = [
-    { key: 'A_mobility', label: 'A. Lái xe thực địa', icon: <Compass className="w-4 h-4" /> },
-    { key: 'B_terrain', label: 'B. Quét & Ghim bản đồ', icon: <Camera className="w-4 h-4" /> },
-    { key: 'C_sample', label: 'C. Khoan & Lưu mẫu', icon: <Wrench className="w-4 h-4" /> },
-    { key: 'D_comms', label: 'D. Nối mạch & Bắt sóng', icon: <Radio className="w-4 h-4" /> },
+  const tasks: SubTaskItem<RoverTaskKey>[] = [
+    {
+      key: 'A_mobility',
+      label: isEn ? 'A. Drive Terrain' : 'A. Lái xe thực địa',
+      icon: <Compass className="w-4 h-4" />,
+      hasError: mobState.status === 'failed',
+    },
+    {
+      key: 'B_terrain',
+      label: isEn ? 'B. Scan & Pin Map' : 'B. Quét & Ghim bản đồ',
+      icon: <Camera className="w-4 h-4" />,
+      hasError: camState.status === 'failed',
+    },
+    {
+      key: 'C_sample',
+      label: isEn ? 'C. Drill & Seal' : 'C. Khoan & Lưu mẫu',
+      icon: <Wrench className="w-4 h-4" />,
+      hasError: armState.status === 'failed',
+    },
+    {
+      key: 'D_comms',
+      label: isEn ? 'D. Wire & Transmit' : 'D. Nối mạch & Bắt sóng',
+      icon: <Radio className="w-4 h-4" />,
+      hasError: commsState.status === 'failed',
+    },
   ];
 
   return (
     <div className="space-y-5">
-      {/* 4 Sub-Mission Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {tasks.map((t) => {
-          const active = activeTask === t.key;
-          const done = isDone(t.key);
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => {
-                sound.playClick();
-                setActiveTask(t.key);
-              }}
-              className={`min-h-12 px-3.5 py-2.5 rounded-2xl border-2 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-all ${
-                active
-                  ? 'bg-sky-500 text-white border-sky-600 shadow-sm'
-                  : done
-                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                  : 'bg-white text-sky-950 border-sky-200 hover:border-sky-400'
-              }`}
-            >
-              <span className="flex items-center gap-1.5 truncate">
-                {t.icon}
-                <span className="truncate">{t.label}</span>
-              </span>
-              {done && <CheckCircle2 className="w-4 h-4 shrink-0" />}
-            </button>
-          );
-        })}
-      </div>
+      <SubTaskStatusBar
+        tasks={tasks}
+        activeTask={activeTask}
+        completedTasks={session.completedSubTasks}
+        failedTasks={session.failedSubTasks}
+        lang={lang}
+        onSelect={setActiveTask}
+      />
 
       {/* TASK A: INTERACTIVE JOYSTICK + TERRAIN PHYSICS */}
       {activeTask === 'A_mobility' && (
@@ -393,33 +508,38 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold text-sky-950 font-display">
-                Nhiệm vụ A: Điều khiển trực tiếp Perseverance vượt địa hình Jezero
+                {isEn
+                  ? 'Task A: Direct Drive Perseverance Across Jezero Terrain'
+                  : 'Nhiệm vụ A: Điều khiển trực tiếp Perseverance vượt địa hình Jezero'}
               </h2>
-              <p className="text-xs sm:text-sm text-sky-800/85 font-medium">{driveFeedback}</p>
+              <p className="text-xs sm:text-sm text-sky-800/85 font-medium">
+                {driveFeedback || defaultDrivePrompt}
+              </p>
             </div>
             <div className="flex items-center gap-3 text-xs font-extrabold text-sky-900 tabular-nums">
-              <span>Pin: {batteryPct}%</span>
+              <span>{isEn ? 'Battery:' : 'Pin:'} {batteryPct}%</span>
               <span>·</span>
-              <span>Ổn định: {stabilityPct}%</span>
+              <span>{isEn ? 'Stability:' : 'Ổn định:'} {stabilityPct}%</span>
               <span>·</span>
               <span className="text-sky-700">{terrainTypeLabel}</span>
             </div>
           </div>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="rover_mobility"
-            actionLabel="Điều khiển bánh xe"
+            actionLabel={isEn ? 'Wheel mobility drive' : 'Điều khiển bánh xe'}
             onOpenRepair={onOpenRepair}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
             <div className="lg:col-span-8 relative rounded-3xl overflow-hidden border-2 border-sky-200 bg-amber-50 h-[265px] select-none">
               <img
-                src="/src/assets/images/sunny_mars_playground_1794563133433.jpg"
-                alt="Bề mặt Sao Hỏa"
+                src="/src/assets/images/mars_jezero_delta_1794503039436.jpg"
+                alt={isEn ? 'Jezero Crater surface on Mars' : 'Bề mặt miệng hố Jezero trên Sao Hỏa'}
                 referrerPolicy="no-referrer"
-                className="absolute inset-0 w-full h-full object-cover opacity-80"
+                className="absolute inset-0 w-full h-full object-cover opacity-85"
               />
 
               {/* Sand Trap Zone */}
@@ -427,7 +547,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                 style={{ left: '145px', top: '120px', width: '120px', height: '100px' }}
                 className="absolute rounded-2xl bg-amber-300/65 border-2 border-dashed border-amber-700 flex items-center justify-center text-[11px] font-extrabold text-amber-950 text-center p-1"
               >
-                Hố cát lún (Chậm · Hao pin)
+                {isEn ? 'Sand Trap (Slow · High Drain)' : 'Hố cát lún (Chậm · Hao pin)'}
               </div>
 
               {/* Steep Rock Slope */}
@@ -435,7 +555,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                 style={{ left: '280px', top: '45px', width: '105px', height: '100px' }}
                 className="absolute rounded-2xl bg-orange-300/60 border-2 border-dashed border-orange-700 flex items-center justify-center text-[11px] font-extrabold text-orange-950 text-center p-1"
               >
-                Dốc đá 22°
+                {isEn ? '22° Rock Slope' : 'Dốc đá 22°'}
               </div>
 
               {/* Goal Checkpoint */}
@@ -444,7 +564,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                 className="absolute px-3 py-1.5 rounded-xl bg-emerald-500 text-white border-2 border-white text-xs font-extrabold shadow-md flex items-center gap-1"
               >
                 <Flag className="w-3.5 h-3.5" />
-                <span>Mục tiêu</span>
+                <span>{isEn ? 'Target' : 'Mục tiêu'}</span>
               </div>
 
               {/* Rover Avatar */}
@@ -465,6 +585,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
             {/* Virtual Joystick + D-Pad Controls */}
             <div className="lg:col-span-4 rounded-2xl bg-sky-50/70 border-2 border-sky-200 p-4 flex flex-col items-center gap-3">
               <VirtualJoystick
+                lang={lang}
                 disabled={mobState.status === 'failed'}
                 onVectorMove={(dxN, dyN, deg) => {
                   const now = Date.now();
@@ -479,7 +600,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                   type="button"
                   disabled={mobState.status === 'failed'}
                   onClick={() => moveRover(0, -22, -90)}
-                  aria-label="Tiến lên"
+                  aria-label={isEn ? 'Drive forward' : 'Tiến lên'}
                   className="w-10 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:bg-slate-300 text-white flex items-center justify-center cursor-pointer"
                 >
                   <ArrowUp className="w-5 h-5" />
@@ -489,7 +610,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                     type="button"
                     disabled={mobState.status === 'failed'}
                     onClick={() => moveRover(-22, 0, 180)}
-                    aria-label="Sang trái"
+                    aria-label={isEn ? 'Drive left' : 'Sang trái'}
                     className="w-10 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:bg-slate-300 text-white flex items-center justify-center cursor-pointer"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -498,7 +619,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                     type="button"
                     disabled={mobState.status === 'failed'}
                     onClick={() => moveRover(0, 22, 90)}
-                    aria-label="Lùi xuống"
+                    aria-label={isEn ? 'Drive backward' : 'Lùi xuống'}
                     className="w-10 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:bg-slate-300 text-white flex items-center justify-center cursor-pointer"
                   >
                     <ArrowDown className="w-5 h-5" />
@@ -507,7 +628,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                     type="button"
                     disabled={mobState.status === 'failed'}
                     onClick={() => moveRover(22, 0, 0)}
-                    aria-label="Sang phải"
+                    aria-label={isEn ? 'Drive right' : 'Sang phải'}
                     className="w-10 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:bg-slate-300 text-white flex items-center justify-center cursor-pointer"
                   >
                     <ArrowRight className="w-5 h-5" />
@@ -525,21 +646,26 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold text-sky-950 font-display">
-                Nhiệm vụ B: Kéo khung quan sát Navcam & Đánh dấu chướng ngại vật
+                {isEn
+                  ? 'Task B: Drag Navcam Viewfinder & Tag Terrain Hazards'
+                  : 'Nhiệm vụ B: Kéo khung quan sát Navcam & Đánh dấu chướng ngại vật'}
               </h2>
               <p className="text-xs text-sky-800/85 font-medium">
-                Kéo khung ngắm xanh đến từng vòng tròn để chụp ảnh phân tích, sau đó chạm nút đánh dấu các khu vực nguy hiểm.
+                {isEn
+                  ? 'Drag the blue viewfinder over each circle to scan & capture, then tap zones to flag hazards.'
+                  : 'Kéo khung ngắm xanh đến từng vòng tròn để chụp ảnh phân tích, sau đó chạm nút đánh dấu các khu vực nguy hiểm.'}
               </p>
             </div>
             <span className="text-xs font-extrabold text-sky-700 tabular-nums">
-              Đã quét: {scannedZones.length}/3 vùng
+              {isEn ? `Scanned: ${scannedZones.length}/3 zones` : `Đã quét: ${scannedZones.length}/3 vùng`}
             </span>
           </div>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="rover_camera"
-            actionLabel="Camera quan sát địa hình"
+            actionLabel={isEn ? 'Terrain Navigation Camera' : 'Camera quan sát địa hình'}
             onOpenRepair={onOpenRepair}
           />
 
@@ -555,7 +681,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
           >
             <img
               src="/src/assets/images/mars_jezero_delta_1794503039436.jpg"
-              alt="Bản đồ địa hình Jezero"
+              alt={isEn ? 'Jezero terrain survey map' : 'Bản đồ địa hình Jezero'}
               referrerPolicy="no-referrer"
               className={`w-full h-full object-cover ${
                 camState.status !== 'ok' ? 'blur-[3px] opacity-75' : ''
@@ -585,11 +711,17 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                     }`}
                   >
                     <MapPin className="w-3.5 h-3.5" />
-                    <span>{z.label}</span>
+                    <span>{isEn ? z.labelEn : z.label}</span>
                   </button>
                   {scanned && (
-                    <span className="px-2 py-0.5 rounded-lg bg-sky-950/85 text-white text-[10px] font-bold whitespace-nowrap">
-                      {flagged ? 'Đã gắn cờ Nguy hiểm' : 'Chạm để gắn cờ nguy hiểm'}
+                    <span className="px-2 py-0.5 rounded-lg bg-sky-950/85 text-white text-[10px] font-bold text-center leading-tight max-w-[160px]">
+                      {flagged
+                        ? isEn
+                          ? 'Flagged: Hazard'
+                          : 'Đã gắn cờ Nguy hiểm'
+                        : isEn
+                        ? 'Tap to flag hazard'
+                        : 'Chạm để gắn cờ nguy hiểm'}
                     </span>
                   )}
                 </div>
@@ -606,8 +738,8 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
               style={{ left: `${framePos.xPct}%`, top: `${framePos.yPct}%` }}
               className="absolute -translate-x-1/2 -translate-y-1/2 w-28 h-24 rounded-2xl border-4 border-sky-400 bg-sky-400/15 shadow-lg cursor-grab active:cursor-grabbing flex items-end justify-center p-1"
             >
-              <span className="px-2 py-0.5 rounded-md bg-sky-600 text-white text-[10px] font-extrabold whitespace-nowrap">
-                Khung quét Navcam
+              <span className="px-2 py-0.5 rounded-md bg-sky-600 text-white text-[10px] font-extrabold text-center leading-tight">
+                {isEn ? 'Navcam Frame' : 'Khung quét Navcam'}
               </span>
             </div>
           </div>
@@ -626,7 +758,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
               className="min-h-11 px-5 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm flex items-center gap-2 cursor-pointer"
             >
               <Camera className="w-4 h-4" />
-              <span>Chụp & Quét tại khung</span>
+              <span>{isEn ? 'Capture & Scan Frame' : 'Chụp & Quét tại khung'}</span>
             </button>
 
             <button
@@ -635,7 +767,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
               onClick={handleVerifySurveyMap}
               className="min-h-11 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer"
             >
-              Xác nhận bản đồ chướng ngại vật
+              {isEn ? 'Confirm Hazard Map' : 'Xác nhận bản đồ chướng ngại vật'}
             </button>
           </div>
         </div>
@@ -645,13 +777,16 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
       {activeTask === 'C_sample' && (
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <h2 className="text-lg font-bold text-sky-950 font-display">
-            Nhiệm vụ C: Căn chỉnh cánh tay, kiểm soát lực khoan & niêm phong mẫu
+            {isEn
+              ? 'Task C: Align Robotic Arm, Control Drill Force & Seal Core Sample'
+              : 'Nhiệm vụ C: Căn chỉnh cánh tay, kiểm soát lực khoan & niêm phong mẫu'}
           </h2>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="rover_arm"
-            actionLabel="Cánh tay khoan mẫu đá"
+            actionLabel={isEn ? 'Core Sampling Robotic Arm' : 'Cánh tay khoan mẫu đá'}
             onOpenRepair={onOpenRepair}
           />
 
@@ -687,7 +822,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
             <div className="space-y-3">
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-extrabold text-sky-900">
-                  <span>Độ vươn cánh tay (Vùng mẫu: 68–86%)</span>
+                  <span>{isEn ? 'Arm Extension (Target: 68–86%)' : 'Độ vươn cánh tay (Vùng mẫu: 68–86%)'}</span>
                   <span className="tabular-nums text-sky-600">{armReach}%</span>
                 </div>
                 <input
@@ -703,7 +838,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-extrabold text-sky-900">
-                  <span>Độ hạ mũi khoan (Vùng mẫu: 58–78%)</span>
+                  <span>{isEn ? 'Drill Depth (Target: 58–78%)' : 'Độ hạ mũi khoan (Vùng mẫu: 58–78%)'}</span>
                   <span className="tabular-nums text-sky-600">{drillDepth}%</span>
                 </div>
                 <input
@@ -719,7 +854,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
 
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-extrabold text-sky-900">
-                  <span>Tốc độ & Lực mũi khoan (An toàn: 45–80%)</span>
+                  <span>{isEn ? 'Drill Speed & Torque (Safe: 45–80%)' : 'Tốc độ & Lực mũi khoan (An toàn: 45–80%)'}</span>
                   <span className="tabular-nums text-orange-600">{drillRpm}%</span>
                 </div>
                 <input
@@ -741,7 +876,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                   className="flex-1 min-h-11 px-4 py-2.5 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Wrench className="w-4 h-4" />
-                  <span>1. Khoan lõi đá</span>
+                  <span>{isEn ? '1. Drill Rock Core' : '1. Khoan lõi đá'}</span>
                 </button>
 
                 <button
@@ -751,7 +886,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                   className="flex-1 min-h-11 px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>2. Niêm phong ống mẫu</span>
+                  <span>{isEn ? '2. Seal Sample Tube' : '2. Niêm phong ống mẫu'}</span>
                 </button>
               </div>
             </div>
@@ -769,33 +904,53 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
       {activeTask === 'D_comms' && (
         <div className="rounded-3xl bg-white border-2 border-sky-200 p-5 shadow-sm space-y-4">
           <h2 className="text-lg font-bold text-sky-950 font-display">
-            Nhiệm vụ D: Nối mạch phát sóng UHF & Quay chảo bắt vệ tinh MRO
+            {isEn
+              ? 'Task D: Wire UHF Transmitter & Track Mars Reconnaissance Orbiter'
+              : 'Nhiệm vụ D: Nối mạch phát sóng UHF & Quay chảo bắt vệ tinh MRO'}
           </h2>
 
           <SubsystemLockNotice
+            lang={lang}
             session={session}
             subsystemId="rover_comms"
-            actionLabel="Ăng-ten truyền dữ liệu"
+            actionLabel={isEn ? 'UHF / HGA Antenna System' : 'Ăng-ten truyền dữ liệu'}
             onOpenRepair={onOpenRepair}
           />
 
           <CircuitWiringBoard
-            title="Bước 1: Nối mạch truyền tin UHF"
-            instruction="Kéo hoặc chạm nối Nguồn điện -> Khuếch đại UHF -> Chảo ăng-ten đúng cực."
+            lang={lang}
+            title={isEn ? 'Step 1: Wire the UHF radio harness' : 'Bước 1: Nối mạch truyền tin UHF'}
+            instruction={
+              isEn
+                ? 'Connect Power Bus -> UHF Modulator -> Ground to matching ports.'
+                : 'Kéo hoặc chạm nối Nguồn điện -> Khuếch đại UHF -> Chảo ăng-ten đúng cực.'
+            }
             disabled={commsState.status === 'failed'}
             leftNodes={[
-              { id: 'pwr', label: 'Nguồn 28V MMRTG', color: '#f59e0b', sublabel: 'Cấp điện RF' },
-              { id: 'data', label: 'Dữ liệu Mastcam', color: '#0284c7', sublabel: 'Gói ảnh & mẫu' },
-              { id: 'gnd', label: 'Dây tiếp địa', color: '#64748b', sublabel: 'Chống nhiễu' },
+              { id: 'pwr', label: isEn ? '28V MMRTG Bus' : 'Nguồn 28V MMRTG', color: '#f59e0b', sublabel: isEn ? 'RF Power' : 'Cấp điện RF' },
+              { id: 'data', label: isEn ? 'Mastcam Data' : 'Dữ liệu Mastcam', color: '#0284c7', sublabel: isEn ? 'Photos & Core Log' : 'Gói ảnh & mẫu' },
+              { id: 'gnd', label: isEn ? 'Chassis Ground' : 'Dây tiếp địa', color: '#64748b', sublabel: isEn ? 'Noise Shield' : 'Chống nhiễu' },
             ]}
             rightNodes={[
-              { id: 'in_data', label: 'Bộ điều chế UHF', color: '#0284c7', sublabel: 'Nhận gói ảnh' },
-              { id: 'in_gnd', label: 'Vỏ khung tiếp địa', color: '#64748b', sublabel: 'Khử tĩnh điện' },
-              { id: 'in_pwr', label: 'Chân nguồn UHF', color: '#f59e0b', sublabel: '28V DC' },
+              { id: 'in_data', label: isEn ? 'UHF Modulator' : 'Bộ điều chế UHF', color: '#0284c7', sublabel: isEn ? 'Packet Input' : 'Nhận gói ảnh' },
+              { id: 'in_gnd', label: isEn ? 'Ground Bus Bar' : 'Vỏ khung tiếp địa', color: '#64748b', sublabel: isEn ? 'ESD Drain' : 'Khử tĩnh điện' },
+              { id: 'in_pwr', label: isEn ? 'UHF Power Pin' : 'Chân nguồn UHF', color: '#f59e0b', sublabel: '28V DC' },
             ]}
             expectedConnections={[
-              { fromId: 'pwr', toId: 'in_pwr', errorHint: 'Nguồn 28V phải nối vào Chân nguồn UHF (tránh cháy bộ điều chế)!' },
-              { fromId: 'data', toId: 'in_data', errorHint: 'Dữ liệu Mastcam phải nối vào Bộ điều chế UHF!' },
+              {
+                fromId: 'pwr',
+                toId: 'in_pwr',
+                errorHint: isEn
+                  ? '28V Bus must connect to the UHF Power Pin (or the modulator shorts out)!'
+                  : 'Nguồn 28V phải nối vào Chân nguồn UHF (tránh cháy bộ điều chế)!',
+              },
+              {
+                fromId: 'data',
+                toId: 'in_data',
+                errorHint: isEn
+                  ? 'Mastcam Data must connect to the UHF Modulator!'
+                  : 'Dữ liệu Mastcam phải nối vào Bộ điều chế UHF!',
+              },
               { fromId: 'gnd', toId: 'in_gnd' },
             ]}
             onSuccess={() => setUhfWired(true)}
@@ -805,14 +960,18 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
           <div className="rounded-2xl bg-sky-50 border-2 border-sky-200 p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-extrabold text-sky-950">
-                Bước 2: Quay góc chảo ăng-ten bám theo vệ tinh MRO đang bay qua (Sai số ≤ 14°)
+                {isEn
+                  ? 'Step 2: Steer antenna dish to track passing MRO satellite (Error ≤ 14°)'
+                  : 'Bước 2: Quay góc chảo ăng-ten bám theo vệ tinh MRO đang bay qua (Sai số ≤ 14°)'}
               </span>
               <span
                 className={`text-xs font-extrabold tabular-nums ${
                   mroSignalAligned ? 'text-emerald-700' : 'text-amber-700'
                 }`}
               >
-                Vệ tinh MRO: {Math.round(mroAngle)}° · Chảo xe: {dishAngle}°
+                {isEn
+                  ? `MRO Orbiter: ${Math.round(mroAngle)}° · Dish: ${dishAngle}°`
+                  : `Vệ tinh MRO: ${Math.round(mroAngle)}° · Chảo xe: ${dishAngle}°`}
               </span>
             </div>
 
@@ -822,7 +981,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                 className="absolute top-3 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-amber-400 text-sky-950 text-[11px] font-extrabold shadow transition-all"
                 style={{ left: `${((mroAngle - 15) / 115) * 100}%` }}
               >
-                Vệ tinh MRO
+                {isEn ? 'MRO Orbiter' : 'Vệ tinh MRO'}
               </div>
               {/* Dish Aim Beam */}
               <div
@@ -831,7 +990,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
                 }`}
                 style={{ left: `${((dishAngle - 15) / 115) * 100}%` }}
               >
-                Hướng chảo UHF ({dishAngle}°)
+                {isEn ? `UHF Dish (${dishAngle}°)` : `Hướng chảo UHF (${dishAngle}°)`}
               </div>
             </div>
 
@@ -858,7 +1017,7 @@ export const PerseveranceSimulator: React.FC<PerseveranceSimulatorProps> = ({
             onClick={handleTransmitUhf}
             className="min-h-12 px-6 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-sm cursor-pointer"
           >
-            Phát sóng truyền dữ liệu qua MRO
+            {isEn ? 'Transmit Telemetry via MRO' : 'Phát sóng truyền dữ liệu qua MRO'}
           </button>
         </div>
       )}

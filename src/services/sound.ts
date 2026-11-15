@@ -277,11 +277,11 @@ class SoundService {
     }
   }
 
-  // 10. Child-friendly cute female Vietnamese voice narration
+  // 10. Natural, clear female Vietnamese voice narration
   private cachedViVoice: SpeechSynthesisVoice | null = null;
   private voicesHooked: boolean = false;
 
-  private pickCuteFemaleViVoice(): SpeechSynthesisVoice | null {
+  private pickNaturalFemaleViVoice(): SpeechSynthesisVoice | null {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return null;
@@ -357,7 +357,7 @@ class SoundService {
     }
   }
 
-  public speak(text: string, _lang: 'vi' | 'en' = 'vi', onEnd?: () => void) {
+  public speak(text: string, lang: 'vi' | 'en' = 'vi', onEnd?: () => void) {
     if (this.isMuted || !this.isSpeechSupported() || !text.trim()) {
       onEnd?.();
       return;
@@ -368,20 +368,38 @@ class SoundService {
       if (!this.voicesHooked && typeof synth.addEventListener === 'function') {
         this.voicesHooked = true;
         synth.addEventListener('voiceschanged', () => {
-          this.pickCuteFemaleViVoice();
+          this.pickNaturalFemaleViVoice();
         });
       }
 
       synth.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'vi-VN';
-      utterance.rate = 0.94;
-      utterance.pitch = 1.16;
-      utterance.volume = 1.0;
+      if (lang === 'en') {
+        utterance.lang = 'en-US';
+        utterance.rate = 0.98;
+        utterance.pitch = 1.02;
+        utterance.volume = 1.0;
+        const voices = synth.getVoices ? synth.getVoices() : [];
+        const enVoice =
+          voices.find(
+            (v) =>
+              v.lang.toLowerCase().startsWith('en') &&
+              (v.name.toLowerCase().includes('natural') ||
+                v.name.toLowerCase().includes('google us') ||
+                v.name.toLowerCase().includes('samantha') ||
+                v.name.toLowerCase().includes('female'))
+          ) || voices.find((v) => v.lang.toLowerCase().startsWith('en'));
+        if (enVoice) utterance.voice = enVoice;
+      } else {
+        utterance.lang = 'vi-VN';
+        utterance.rate = 0.98;
+        utterance.pitch = 1.02;
+        utterance.volume = 1.0;
 
-      const femaleViVoice = this.pickCuteFemaleViVoice() || this.cachedViVoice;
-      if (femaleViVoice) {
-        utterance.voice = femaleViVoice;
+        const femaleViVoice = this.pickNaturalFemaleViVoice() || this.cachedViVoice;
+        if (femaleViVoice) {
+          utterance.voice = femaleViVoice;
+        }
       }
 
       utterance.onend = () => onEnd?.();

@@ -38,8 +38,8 @@ export const novaService = {
       const isVi = lang === 'vi';
       return {
         reply: isVi
-          ? `Chào ${context.cadetName}! Tớ luôn đồng hành cùng em. Em hãy kiểm tra xem hệ thống điện và khối lượng của tàu đã cân bằng chưa nhé!`
-          : `Hello ${context.cadetName}! I am here with you. Check if your power budget and spacecraft mass are well balanced!`,
+          ? `Chào ${context.cadetName}. Hệ thống trợ lý đang kết nối lại — bạn hãy kiểm tra cân bằng năng lượng và ngân sách thiết bị trước khi vận hành.`
+          : `Hello ${context.cadetName}. Please verify your power balance and budget limits before operation.`,
         source: 'nova-local-guardian',
       };
     }

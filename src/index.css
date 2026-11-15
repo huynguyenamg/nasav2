@@ -9,8 +9,8 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: #f0f9ff;
-  color: #0c4a6e;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 h1, h2, h3, h4, button, input, select, textarea, .font-display {
@@ -19,13 +19,13 @@ h1, h2, h3, h4, button, input, select, textarea, .font-display {
 
 @keyframes gentle-wobble {
   0%, 100% {
-    transform: translateX(0) rotate(0deg);
+    transform: translateX(0);
   }
   25% {
-    transform: translateX(-3px) rotate(-0.6deg);
+    transform: translateX(-2px);
   }
   75% {
-    transform: translateX(3px) rotate(0.6deg);
+    transform: translateX(2px);
   }
 }
 
@@ -33,18 +33,18 @@ h1, h2, h3, h4, button, input, select, textarea, .font-display {
   animation: gentle-wobble 0.45s ease-in-out infinite;
 }
 
-/* Soft sky-blue scrollbar for sunny light UI */
+/* Clean metallic slate scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #e0f2fe;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #7dd3fc;
-  border-radius: 9999px;
+  background: #94a3b8;
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
+  background: #64748b;
 }

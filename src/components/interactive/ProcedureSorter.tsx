@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Language } from '../../types/game';
 import { sound } from '../../services/sound';
 import { ArrowDown, ArrowUp, CheckCircle2, GripVertical, Play } from 'lucide-react';
 
@@ -13,6 +14,7 @@ interface ProcedureSorterProps {
   instruction: string;
   steps: ProcedureStepItem[];
   expectedOrder: string[];
+  lang?: Language;
   disabled?: boolean;
   onSuccess: () => void;
   onMistake?: (feedback: string) => void;
@@ -23,6 +25,7 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
   instruction,
   steps,
   expectedOrder,
+  lang = 'vi',
   disabled = false,
   onSuccess,
   onMistake,
@@ -30,6 +33,17 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
   const [ordered, setOrdered] = useState<ProcedureStepItem[]>(steps);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    setOrdered((prev) => {
+      if (prev.length !== steps.length) return steps;
+      const stepMap = new Map(steps.map((s) => [s.id, s]));
+      const allExist = prev.every((item) => stepMap.has(item.id));
+      if (!allExist) return steps;
+      return prev.map((item) => stepMap.get(item.id)!);
+    });
+    setFeedback(null);
+  }, [steps, lang]);
 
   const moveItem = (from: number, to: number) => {
     if (disabled || to < 0 || to >= ordered.length || from === to) return;
@@ -52,7 +66,9 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
         const expectedStep = steps.find((s) => s.id === expectedOrder[i]);
         const msg =
           wrongStep?.criticalNote ||
-          `Sai thứ tự tại bước ${i + 1}! Cần thực hiện "${expectedStep?.label}" trước khi chuyển sang "${wrongStep?.label}".`;
+          (lang === 'en'
+            ? `Order error at step ${i + 1}! Execute "${expectedStep?.label}" before moving to "${wrongStep?.label}".`
+            : `Sai thứ tự tại bước ${i + 1}! Cần thực hiện "${expectedStep?.label}" trước khi chuyển sang "${wrongStep?.label}".`);
         setFeedback({ ok: false, text: msg });
         onMistake?.(msg);
         return;
@@ -62,7 +78,10 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
     sound.playSuccess();
     setFeedback({
       ok: true,
-      text: 'Quy trình kỹ thuật chuẩn xác! Mọi bước kiểm tra và an toàn đều được thực thi đúng thứ tự.',
+      text:
+        lang === 'en'
+          ? 'Procedure verified! All safety and inspection steps are ordered correctly.'
+          : 'Quy trình kỹ thuật chuẩn xác! Mọi bước kiểm tra và an toàn đều được thực thi đúng thứ tự.',
     });
     onSuccess();
   };
@@ -103,7 +122,7 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
                 type="button"
                 disabled={disabled || index === 0}
                 onClick={() => moveItem(index, index - 1)}
-                aria-label="Đưa bước lên"
+                aria-label={lang === 'en' ? 'Move step up' : 'Đưa bước lên'}
                 className="w-8 h-8 rounded-lg bg-sky-50 hover:bg-sky-100 disabled:opacity-35 text-sky-800 flex items-center justify-center cursor-pointer"
               >
                 <ArrowUp className="w-4 h-4" />
@@ -112,7 +131,7 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
                 type="button"
                 disabled={disabled || index === ordered.length - 1}
                 onClick={() => moveItem(index, index + 1)}
-                aria-label="Đưa bước xuống"
+                aria-label={lang === 'en' ? 'Move step down' : 'Đưa bước xuống'}
                 className="w-8 h-8 rounded-lg bg-sky-50 hover:bg-sky-100 disabled:opacity-35 text-sky-800 flex items-center justify-center cursor-pointer"
               >
                 <ArrowDown className="w-4 h-4" />
@@ -142,7 +161,9 @@ export const ProcedureSorter: React.FC<ProcedureSorterProps> = ({
         className="min-h-11 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 cursor-pointer shadow-sm"
       >
         <Play className="w-4 h-4" />
-        <span>Thực thi quy trình đã sắp xếp</span>
+        <span>
+          {lang === 'en' ? 'Execute Ordered Sequence' : 'Thực thi quy trình đã sắp xếp'}
+        </span>
       </button>
     </div>
   );

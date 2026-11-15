@@ -299,8 +299,11 @@ export interface EngineeringPart {
   subsystemId: EquipmentSubsystemId;
   tier: PartTier;
   name: string;
+  nameEn?: string;
   shortDesc: string;
+  shortDescEn?: string;
   tradeoffNote: string;
+  tradeoffNoteEn?: string;
   purchaseCost: number;
   maintenanceCost: number;
   durability: number; // 0-100
@@ -310,16 +313,20 @@ export interface EngineeringPart {
   powerGenW: number;
   compatibleMissions: MissionId[];
   incompatibleReason?: string;
+  incompatibleReasonEn?: string;
 }
 
 export interface SubsystemBlueprint {
   id: EquipmentSubsystemId;
   missionId: MissionId;
   name: string;
+  nameEn?: string;
   role: string;
+  roleEn?: string;
   icon: string;
   dependsOn: EquipmentSubsystemId[];
   affectedFunctions: string[];
+  affectedFunctionsEn?: string[];
   hotspotCoords: { x: number; y: number };
   criticality: 'core' | 'support';
   idealTier: PartTier;
@@ -331,7 +338,9 @@ export interface SubsystemRuntimeState {
   health: number; // 0-100
   status: SubsystemHealthStatus;
   faultTitle?: string;
+  faultTitleEn?: string;
   faultCause?: string;
+  faultCauseEn?: string;
   diagnosed?: boolean;
 }
 
@@ -363,12 +372,62 @@ export interface SafetyGateReport {
   netPowerW: number;
 }
 
+export type NasaAssetType =
+  | 'REAL_PHOTO'
+  | 'TECHNICAL_DIAGRAM'
+  | 'SCIENTIFIC_DATA'
+  | 'SIMPLIFIED_DIAGRAM'
+  | 'UI_ICON';
+
+export interface VerifiedNasaAsset {
+  assetId: string;
+  deviceId: MissionId;
+  componentId?: string;
+  title: string;
+  titleEn?: string;
+  imageUrl: string;
+  fallbackImageUrl?: string;
+  sourcePage: string;
+  sourceOrganization: 'NASA' | 'NASA / JPL' | 'NASA / USGS' | 'USGS' | 'Canadian Space Agency' | 'NASA / ESA';
+  imageType: NasaAssetType;
+  caption: string;
+  captionEn?: string;
+  attribution: string;
+  license: string;
+  verified: boolean;
+  resolution?: string;
+  usageContext: string;
+}
+
+export interface CostHistoryEntry {
+  id: string;
+  label: string;
+  labelEn?: string;
+  category: 'purchase' | 'repair' | 'maintenance' | 'operating' | 'penalty';
+  amount: number;
+}
+
+export interface BudgetFailureInfo {
+  failed: true;
+  initialBudget: number;
+  totalCost: number;
+  overrunAmount: number;
+  triggerDecision: string;
+  triggerDecisionEn?: string;
+  topExpenses: { label: string; amount: number }[];
+  overBudgetDecisions: string[];
+  advice: string;
+}
+
 export interface MissionSessionState {
   missionId: MissionId;
   difficulty: DifficultyLevel;
   subsystems: Record<string, SubsystemRuntimeState>;
   economy: MissionEconomyState;
+  costHistory?: CostHistoryEntry[];
+  budgetFailure?: BudgetFailureInfo | null;
   completedSubTasks: string[];
+  failedSubTasks?: string[];
   diagnosisAttempts: number;
   diagnosisCorrect: number;
   incidentsTriggered: number;
@@ -381,6 +440,8 @@ export interface MissionEvaluationReport {
   xpEarned: number;
   finalScore: number; // 0-100
   passed: boolean;
+  budgetExceeded?: boolean;
+  overrunAmount?: number;
   outcomeTitle: string;
   totalCost: number;
   initialBudget: number;
